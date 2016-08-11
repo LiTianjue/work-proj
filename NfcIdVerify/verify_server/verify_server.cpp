@@ -130,10 +130,14 @@ void acceptErr(evconnlistener *listener, void *)
 
 void readSock(struct bufferevent *bev, void *)
 {
+	/*
     if(threadpool_add_job(pool,handleRequest,(void *)bev))
     {
         ;
     }
+	*/
+	handleRequest((void*)bev);
+
 }
 
 void sockEvent(struct bufferevent *bev, short events, void *)
@@ -235,6 +239,7 @@ static void sync_db_cb(evutil_socket_t fd,short event,void *arg)
 void print_help()
 {
 	printf("--usage:--\n");
+	printf("-- build time:%s--%s\n",__TIME__,__DATE__);
     printf("-h db host(localhost for default)\n");
     printf("-u username(root for default)\n");
     printf("-p password(admin for default)\n");
@@ -308,7 +313,7 @@ int main(int argc,char *argv[])
     ST_EV_T db_sync;
 
     VerifyServer server;
-    pool = threadpool_init(20,10);
+    //pool = threadpool_init(20,10);
 
     if(!server.setManager(listen_ip.c_str(),listen_port))
     {

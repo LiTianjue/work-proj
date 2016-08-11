@@ -19,13 +19,13 @@ DataBaseOpt::DataBaseOpt()
     m_passwd = "admin";
     m_database = "nfcid";
     m_table = "dev_list";
-    pthread_mutex_init(&lock,NULL);
+    //pthread_mutex_init(&lock,NULL);
 
 }
 
 DataBaseOpt::~DataBaseOpt()
 {
-    pthread_mutex_destroy(&lock);
+    //pthread_mutex_destroy(&lock);
 
 }
 
@@ -40,12 +40,12 @@ void DataBaseOpt::setBase(string host, string user, string passwd, string base, 
 
 void DataBaseOpt::db_lock()
 {
-    pthread_mutex_lock(&lock);
+    //pthread_mutex_lock(&lock);
 }
 
 void DataBaseOpt::db_unlock()
 {
-   pthread_mutex_unlock(&lock);
+   //pthread_mutex_unlock(&lock);
 }
 
 int DataBaseOpt::updataBase()
