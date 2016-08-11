@@ -20,6 +20,9 @@
 #include "sm4.h"
 #include "verify_client.h"
 
+//使用固定长度做序列号认证
+#define SM4_LEN	64
+
 using namespace std;
 
 //加密密钥
@@ -67,7 +70,9 @@ int verify_serial(char *ip,int port,char *serial,int serial_len,int timeout)
 
 	//printf("rand :%s\n",rand);
 
-	unsigned char text[32] = {0};
+	unsigned char text[SM4_LEN] = {0};
+	memset(text,'\0',SM4_LEN);
+
 	int len = 0;
 	memcpy(text,rand,rand_len);
 	len += rand_len;
@@ -79,14 +84,17 @@ int verify_serial(char *ip,int port,char *serial,int serial_len,int timeout)
 
 	//unsigned char encode_data[32] = {0};
 	unsigned char *encode_data = NULL;
-	int elen = (len/16 + 1)*16;
+	//int elen = (len/16 + 1)*16;
+	int elen = SM4_LEN;
     //printf("elen = %d\n",elen);
 	encode_data = (unsigned char *)malloc(elen);
 	memset(encode_data,'\0',elen);
 
 	sm4_context ctx;
 	sm4_setkey_enc(&ctx,key);
-    sm4_crypt_ecb(&ctx,1,strlen((const char *)text),text,encode_data);
+    //sm4_crypt_ecb(&ctx,1,strlen((const char *)text),text,encode_data);
+	//整串加密
+    sm4_crypt_ecb(&ctx,1,SM4_LEN,text,encode_data);
     //print_hex("encode",encode_data,elen);
 	
     //printf("encode len :%d\n",elen);
@@ -100,20 +108,36 @@ int verify_serial(char *ip,int port,char *serial,int serial_len,int timeout)
 	   return -1;
    }
    else {
+	   //分两次发送测试
+       //writeWithTimeout(sockfd,(char *)encode_data,16,timeout);
+	   //sleep(1);
+       //writeWithTimeout(sockfd,(char *)encode_data+16,elen-16,timeout);
+	   
        writeWithTimeout(sockfd,(char *)encode_data,elen,timeout);
 	   free(encode_data);
    }
-   unsigned char rdata[32] = {0};
-   int rlen = readWithTimeout(sockfd,(char *)rdata,timeout);
+   unsigned char rdata[SM4_LEN] = {0};
+   int ret = 0;
+   int rlen = 0;
+	while(rlen < SM4_LEN)
+	{
+		ret = readWithTimeout(sockfd,(char *)rdata+rlen,timeout);
+		if(ret > 0)
+			rlen += ret;
+		else
+			break;
+	}
+
     close(sockfd);
 
-    if(rlen <= 0)
+	//printf("Read Len : %d\n",rlen);
+    if(ret <= 0)
         return -1;
    //printf("read len :%d\n",rlen);
    //print_hex("rdata",rdata,rlen);
 
-   unsigned char res[32] = {0};
-   memset(res,'\0',32);
+   unsigned char res[SM4_LEN] = {0};
+   memset(res,'\0',SM4_LEN);
 
    sm4_setkey_dec(&ctx,key);
    sm4_crypt_ecb(&ctx,0,rlen,rdata,res);
@@ -327,6 +351,7 @@ static int readWithTimeout(int sockfd,char *buff,int timeout)
             return -1;
         }else if(h == 0)
         {
+			//timeout;
             return -2;
         }else if(h > 0)
         {
