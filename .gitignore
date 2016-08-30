@@ -1,2 +1,3 @@
 *.o
 *.so
+Pkcs11_Tool/env_setup/app
