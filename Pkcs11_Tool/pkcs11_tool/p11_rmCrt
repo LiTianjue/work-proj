@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# 密钥和证书关联，删除证书也会删除密钥
+# $1	label
+
+
+pkcs11-tool --module=$P11_MOD -y cert -b -a $1
+#-d 5253415f4b4559504149525f30

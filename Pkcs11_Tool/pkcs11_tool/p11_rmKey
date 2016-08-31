@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# $1	label
+
+pkcs11-tool		--module $P11_MOD -y  privkey  -b -a $1

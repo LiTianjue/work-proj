@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# 生成卡内RSA密钥对
+
+# $1	type
+# $2	label	RSA_1
+# $3	id	
+
+#pkcs11-tool	 --module $P11_MOD --keypairgen --key-type rsa:$1 --label $2 --id $3
+# 不指定ID
+pkcs11-tool	 --module $P11_MOD --keypairgen --key-type rsa:$1 --label $2 

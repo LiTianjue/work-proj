@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# 证书必须是der编码的，使用openssl脚本转换编码
+# 证书的lable和id必须和私钥一致
+# $1	client.der
+# $2	label
+# $3	id
+
+pkcs11-tool --module=$P11_MOD -y cert -w $1 -a $2 -d $3
