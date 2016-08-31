@@ -14,9 +14,10 @@ do
 	fi
 done
 
-echo "Cost ${SECONDS}"
-echo "Success ${ok} Fail ${bad}"
 
 echo "--------------------------"
+echo "Cost ${SECONDS}"
+echo "Success ${ok} Fail ${bad}"
 num=`echo "sclae=2; ${count} / ${SECONDS}" | bc`
 echo "Average ${num} times / s"
+echo "--------------------------"
