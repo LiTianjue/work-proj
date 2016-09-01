@@ -1,0 +1,2 @@
+#!/bin/sh
+openvpn --show-pkcs11-ids $P11_MOD
