@@ -183,6 +183,13 @@ FLAG ECCTest_in()
 	CK_BYTE ECCPubLabel[] = "ECC_PUBLIC_KEY_7";
 	CK_BYTE ECCPriLabel[] = "ECC_PRIVATE_KEY_7";
 	CK_BBOOL isFalse = TRUE;
+#if 0	/* CKA_LABEL TEST*/
+	CK_ATTRUBUTE ECCKeyLabel = {
+		CAK_LABEL,//type
+		ECCPub//value
+		//value_len
+	};
+#endif	/* END CAK_LABEL TEST*/
 	
 	CK_ATTRIBUTE ECCPubKey[] = {
 		{CKA_CLASS, &ECCPubKeyClass, sizeof(ECCPubKeyClass)},

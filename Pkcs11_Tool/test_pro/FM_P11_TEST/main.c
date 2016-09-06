@@ -480,7 +480,7 @@ void main()
     }
 
 	//add by andy test
-
+#if 0
 	CK_SESSION_HANDLE hSession = 0;
 	CK_BYTE_PTR indata = NULL_PTR;
 	CK_BYTE_PTR outdata = NULL_PTR;
@@ -518,8 +518,11 @@ void main()
 		{CKA_CLASS, NULL_PTR, 0}
 	};
 
+	free(indata);
+	free(outdata);
+	free(temp);
 
-#if 0
+#else
 	while (1)
 	{
 		printf("##############################################\n");
@@ -567,9 +570,6 @@ void main()
 		}
 	}
 #endif
-	free(indata);
-	free(outdata);
-	free(temp);
 	//free(pinfo);
 	C_Finalize(NULL_PTR);
 }
