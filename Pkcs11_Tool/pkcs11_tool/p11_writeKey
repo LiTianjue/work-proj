@@ -6,4 +6,4 @@
 #		ECC_PRIVATE_KEY_2
 
 #pkcs11-tool --module=$P11_MOD -y cert -w $1 -a $2 -d $3
-pkcs11-tool --module=$P11_MOD -y private -w $1 -a $2
+pkcs11-tool --module=$P11_MOD -y privkey -w $1 -a $2

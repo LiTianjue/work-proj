@@ -1,0 +1,2 @@
+--module=$P11_MOD -y privkey -w ./sm2.key -a ECC_PRIVATE_KEY_1
+
