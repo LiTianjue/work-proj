@@ -56,6 +56,15 @@ void *handleRequest(void *arg)
         //数据没有接收完整 
         return NULL;
     }
+	//如果数据不是定长的，说明不是我们需要的数据，
+	if(read_len > SM4_LEN)
+	{
+		//直接清除数据
+		//printf("================= clear buff ================\n");
+		evbuffer_drain(input,read_len);
+		return NULL;
+	}
+
 
 	msg = (unsigned char *)malloc(read_len);
 	memset(msg,'\0',read_len);
