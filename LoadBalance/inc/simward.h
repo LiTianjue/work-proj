@@ -15,6 +15,9 @@ typedef struct {
     char *rhost;
 
     short various;
+	
+	//add for LoadBalance
+	char *server_file;	//服务器配置文件
 } parameters;
 
 int parse_cmdline(int argc, char **argv, parameters * params);

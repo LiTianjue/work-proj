@@ -44,6 +44,7 @@ int main(int argc, char **argv)
 
 
     /* Create the sockaddr of the remote host */
+#if 0
     struct sockaddr_in raddr;
     struct hostent *hresolved;
     memset(&raddr, 0, sizeof(struct sockaddr_in));
@@ -54,7 +55,15 @@ int main(int argc, char **argv)
 	return EXIT_FAILURE;
     }
     memcpy(&(raddr.sin_addr), hresolved->h_addr, sizeof(char *));
-
+#else
+	//read server list from file
+	BackEndServer *server = create_backendserver(params.server_file);
+	if(!server)
+	{
+		fprintf(stderr, "Error on Create ServerPool\n");
+		return EXIT_FAILURE;
+	}
+#endif
 
     /* Create our listening socket, on which clients will connect */
     int lsock;
@@ -89,9 +98,15 @@ int main(int argc, char **argv)
     fflush(stdout);
 
     /* Do the stuff ... */
+#if 0
     dispatcher(lsock, &raddr,
 	       (params.various & tFLAG) ? SOCK_STREAM : SOCK_DGRAM,
 	       params.max);
+#else
+    dispatcher(lsock, server,
+	       (params.various & tFLAG) ? SOCK_STREAM : SOCK_DGRAM,
+	       params.max);
+#endif
 
 
     close(lsock);
@@ -144,7 +159,7 @@ int parse_cmdline(int argc, char **argv, parameters * params)
 	}
     }
 
-    if (optind + 3 != argc) {
+    if (optind + 2 != argc) {
 	fprintf(stderr, "Too few arguments\n\n");
 	usage();
 	return 0;
@@ -155,7 +170,7 @@ int parse_cmdline(int argc, char **argv, parameters * params)
 	fprintf(stderr, "Invalid port: %s\n", argv[optind]);
 	return 0;
     }
-
+#if 0
     params->rhost = argv[optind + 1];
 
     if (sscanf(argv[optind + 2], "%d", &(params->rport)) != 1
@@ -163,6 +178,11 @@ int parse_cmdline(int argc, char **argv, parameters * params)
 	fprintf(stderr, "Invalid port: %s\n", argv[optind + 2]);
 	return 0;
     }
+#else
+	//add for LoadBalance,read server info from file
+	params->server_file = argv[optind +1];
+#endif
+	
 
     if (!(params->various & (tFLAG | uFLAG))) {
 	params->various |= tFLAG;
@@ -184,7 +204,7 @@ int parse_cmdline(int argc, char **argv, parameters * params)
 void usage()
 {
     fprintf(stderr, "Usage: simward [-t|-u] [-m <max>]\n");
-    fprintf(stderr, "\t<local_port> <remote_host> <remote_port>\n");
+    fprintf(stderr, "\t<local_port> <load list file>\n");
 
     fprintf(stderr, "\nOptions:\n");
     fprintf(stderr, "\t-t Use TCP ports (default)\n");

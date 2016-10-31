@@ -231,7 +231,8 @@ int handle_user_command(tracking_infos * infos)
  * forwards and various informations.
  * Then it calls the dispatcher loop corresponding to the given type.
  */
-int dispatcher(int lsock, struct sockaddr_in *dest, int type, int max)
+//int dispatcher(int lsock, struct sockaddr_in *dest, int type, int max)
+int dispatcher(int lsock, BackEndServer *server, int type, int max)
 {
     int ret, plist_size;
     tracking_infos infos;
@@ -240,8 +241,12 @@ int dispatcher(int lsock, struct sockaddr_in *dest, int type, int max)
     infos.nbconnection = 0;
     infos.type = type;
     infos.maxconnection = max;
+#if 0
     infos.raddr = dest;
 
+#else
+	infos.serverpool = server;
+#endif
     /* Forward list */
     infos.flist = (forward **) malloc(sizeof(forward *) * max);
     if (infos.flist == NULL) {

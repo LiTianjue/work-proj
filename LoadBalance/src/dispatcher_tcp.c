@@ -71,13 +71,21 @@ static void handle_new_tcp_client(int lsock, tracking_infos * infos)
 	return;
     }
 
+#if 0 
     if (connect(rsock, (const struct sockaddr *) infos->raddr,
 		sizeof(struct sockaddr_in)) == -1) {
 	perror("connect");
 	close(csock);
 	return;
     }
+#else
+	//add by andy,pick up a remote server from server_pool and connect to remote
+	bserver_info_t *bserver = get_current_server(infos->serverpool);
+	char *ip = bserver->ip;
+	int port = bserver->port;
 
+	
+#endif
 
     /* Register a new forward */
     infos->flist[infos->nbconnection] = new_forward(csock, &caddr, rsock);
