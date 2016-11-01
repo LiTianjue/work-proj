@@ -28,6 +28,7 @@
 #include <time.h>
 
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 #include "dispatcher.h"
 #include "dispatcher_tcp.h"
@@ -83,6 +84,23 @@ static void handle_new_tcp_client(int lsock, tracking_infos * infos)
 	bserver_info_t *bserver = get_current_server(infos->serverpool);
 	char *ip = bserver->ip;
 	int port = bserver->port;
+	struct sockaddr_in raddr;
+	raddr.sin_family = AF_INET;
+	raddr.sin_port = htons(port);
+	if (inet_pton(AF_INET,ip,&(raddr.sin_addr)) <=0 ){
+		fprintf(stderr,"init remote addr fail\n");
+		close(csock);
+		close(rsock);
+		return;
+	}
+	// maybe add a opensocket by timeout?
+	if(connect(rsock,(const struct sockaddr *)(&raddr),sizeof(struct sockaddr_in)) < 0)
+	{
+		perror("connect to remote.");
+		close(csock);
+		close(rsock);
+	}
+	printf("connect to remote [%s : %d]\n",ip,port);
 
 	
 #endif
