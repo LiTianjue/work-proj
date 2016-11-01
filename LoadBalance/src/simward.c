@@ -103,6 +103,7 @@ int main(int argc, char **argv)
 	       (params.various & tFLAG) ? SOCK_STREAM : SOCK_DGRAM,
 	       params.max);
 #else
+	params.max = server->server_count + 1;
     dispatcher(lsock, server,
 	       (params.various & tFLAG) ? SOCK_STREAM : SOCK_DGRAM,
 	       params.max);

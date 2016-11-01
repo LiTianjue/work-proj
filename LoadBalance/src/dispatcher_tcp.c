@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -82,6 +83,14 @@ static void handle_new_tcp_client(int lsock, tracking_infos * infos)
 #else
 	//add by andy,pick up a remote server from server_pool and connect to remote
 	bserver_info_t *bserver = get_current_server(infos->serverpool);
+	if(bserver == NULL || bserver->vaild == 0)
+	{
+		fprintf(stderr,"没有可用打服务器地址\n");
+		close(csock);
+		close(rsock);
+		return ;
+		//没有可用的服务器地址，程序应该退出？
+	}
 	char *ip = bserver->ip;
 	int port = bserver->port;
 	struct sockaddr_in raddr;
@@ -99,8 +108,21 @@ static void handle_new_tcp_client(int lsock, tracking_infos * infos)
 		perror("connect to remote.");
 		close(csock);
 		close(rsock);
+		//by the way , mybe we should remove server unable use from pool
+		if(errno == ECONNREFUSED)
+		{
+			fprintf(stderr,"连接被拒绝\n");
+			bserver->vaild = 0;
+			//连接被拒绝，可能是监听端口未开启
+		} else if (errno == ENETUNREACH) {
+			fprintf(stderr,"网络不可达\n");
+			bserver->vaild = 0;
+			//网络不可达，可能是ip地址是无效的
+		}
+
+		return;
 	}
-	printf("connect to remote [%s : %d]\n",ip,port);
+	//printf("connect to remote [%s : %d]\n",ip,port);
 
 	
 #endif

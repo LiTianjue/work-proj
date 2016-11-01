@@ -1,6 +1,6 @@
 CC=gcc
 #CFLAGS=-Wall -O3
-#CFLAGS= -O3
+CFLAGS= -g
 
 
 PREFIX=/usr

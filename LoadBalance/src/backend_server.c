@@ -28,6 +28,9 @@ BackEndServer *create_backendserver(char *config_file)
 		bserver_info_t *bserver = (bserver_info_t *)malloc(sizeof(bserver_info_t));
 		strcpy(bserver->ip,ip_str);
 		bserver->port = port;
+		bserver->vaild = 1;
+		bserver->next = NULL;
+
 		if(server->head == NULL)
 		{
 			server->server_count = 1;
@@ -51,11 +54,27 @@ BackEndServer *create_backendserver(char *config_file)
 bserver_info_t *get_current_server(BackEndServer *server)
 {
 	bserver_info_t *ret;
-	ret = server->current_server;
+	int n = server->server_count;
+	while(n>0)
+	{
+		ret = server->current_server;
+		server->current_server = ret->next;
+		if(ret->vaild == 1)
+			return ret;
+		n--;
+	}
+	//reset serverpool
+	n = server->server_count;
+	while(n>0)
+	{
+		ret = server->current_server;
+		server->current_server = ret->next;
+		ret->vaild = 1;
+		n--;
+	}
+	
 
-	server->current_server = ret->next;
-
-	return ret;
+	return NULL;
 }
 
 
