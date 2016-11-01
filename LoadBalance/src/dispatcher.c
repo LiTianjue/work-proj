@@ -128,9 +128,11 @@ static void list_active_forwards(tracking_infos * infos)
 	    printf("Members: %s:%hu <-> ",
 		   inet_ntoa(infos->flist[i]->caddr->sin_addr),
 		   ntohs(infos->flist[i]->caddr->sin_port));
+		/*
 	    printf("%s:%hu\n",
 		   inet_ntoa(infos->raddr->sin_addr),
 		   ntohs(infos->raddr->sin_port));
+		*/
 
 	    printf("State: ");
 	    switch (infos->flist[i]->status) {
