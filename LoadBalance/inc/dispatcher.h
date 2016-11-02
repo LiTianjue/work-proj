@@ -10,6 +10,8 @@
 #define P_IDX_R(x) ((x+1)*2+1)
 #define F_IDX(x) ((x/2)-1)
 
+extern int g_debug;
+
 typedef struct {
     forward **flist;
     struct pollfd *plist;

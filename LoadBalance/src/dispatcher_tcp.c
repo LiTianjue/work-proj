@@ -104,6 +104,7 @@ static void handle_new_tcp_client(int lsock, tracking_infos * infos)
 	}
 	// maybe add a opensocket by timeout?
 	// 解码服务器的特性不支持多用户，这里可能会阻塞很久,影响整个负载的性能
+	// 并且考虑到具体需求，我们在连接到后端之前可能需要对数据做一次提前处理
 	// 可以把这个过程放到线程中去执行，但是这样会增加锁及同步的复杂度
 	// 使用线程也会增加开销
 	// fix me !
@@ -126,7 +127,8 @@ static void handle_new_tcp_client(int lsock, tracking_infos * infos)
 
 		return;
 	}
-	//printf("connect to remote [%s : %d]\n",ip,port);
+	if(g_debug)
+		printf("connect to remote [%s : %d]\n",ip,port);
 
 	
 #endif

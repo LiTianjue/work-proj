@@ -4,6 +4,7 @@
 #define tFLAG 1
 #define uFLAG 2
 #define mFLAG 4
+#define dFLAG 8
 
 #define BACKLOG_SZ 10
 #define DEFAULT_MAX 10

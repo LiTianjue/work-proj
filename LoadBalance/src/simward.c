@@ -34,6 +34,8 @@
 #include "simward.h"
 #include "dispatcher.h"
 
+int g_debug = 0;
+
 int main(int argc, char **argv)
 {
     /* Treat command line */
@@ -125,10 +127,14 @@ int parse_cmdline(int argc, char **argv, parameters * params)
 {
     int i;
 
-    while ((i = getopt(argc, argv, "tum:")) > 0) {
+    while ((i = getopt(argc, argv, "dtum:")) > 0) {
 	switch (i) {
+	case 'd':
+		params->various |= dFLAG;
+		g_debug = 1;
+		break;
 	case 't':
-	    if (params->various & uFLAG) {
+		if (params->various & uFLAG) {
 		fprintf(stderr, "Can't specify -t with -u\n");
 		return 0;
 	    }

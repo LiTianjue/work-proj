@@ -278,7 +278,8 @@ int dispatcher(int lsock, BackEndServer *server, int type, int max)
 
 
     /* Watch for user command */
-    infos.plist[0].fd = STDIN_FILENO;
+    //infos.plist[0].fd = STDIN_FILENO;
+    infos.plist[0].fd = -1;
     infos.plist[0].events = POLLIN;
 
     /* Watch for new client */
