@@ -210,10 +210,11 @@ int parse_cmdline(int argc, char **argv, parameters * params)
  */
 void usage()
 {
-    fprintf(stderr, "Usage: simward [-t|-u] [-m <max>]\n");
+    fprintf(stderr, "Usage: simward [-t|-u|-d] [-m <max>] (%s--%s)\n",__TIME__,__DATE__);
     fprintf(stderr, "\t<local_port> <load list file>\n");
 
     fprintf(stderr, "\nOptions:\n");
+    fprintf(stderr, "\t-d Show Debug info\n");
     fprintf(stderr, "\t-t Use TCP ports (default)\n");
     fprintf(stderr, "\t-u Use UDP ports\n");
     fprintf(stderr, "\t-m Maximum number of simultaneous connections\n");
