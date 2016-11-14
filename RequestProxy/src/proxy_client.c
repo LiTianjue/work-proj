@@ -2,11 +2,66 @@
  *	请求代理源端
  *
  **/
+#include "common.h"
+#include "proxy_client.h"
+#include "confread.h"
 
+
+typedef struct _client_params
+{
+	//tcp
+	char tcp_ip[32];
+	int  tcp_port;
+	//udp
+	char peer_ip[32];
+	int  peer_port;
+	char read_ip[32];
+	int  read_port;
+}CLIENT_PARAMS;
 
 
 int proxy_client(int argc,char *argv[])
 {
+	char *lhost,*lport,*phost,*pport,*rhost,*rport;
+
+	//read config file
+	if(argv > 0)
+	{
+		struct confread_file *configFile;
+		struct confread_section *thisSect = 0;
+		struct confread_pair *thisPair = 0;
+
+		if(!(configFile = confread_open(argv[0])))
+		{
+			fprintf(stderr,"Config open failed.\n");
+			return -1;
+		}
+
+		thisSect = confread_find_section(configFile,"tcp");
+		lhost = confread_find_value(thisSect,"listen_ip");
+		lport = confread_find_value(thisSect,"listen_port");
+		
+
+		thisSect = confread_find_section(configFile,"udp");
+		phost = confread_find_value(thisSect,"peer_ip");
+		pport = confread_find_value(thisSect,"peer_port");
+		rhost = confread_find_value(thisSect,"read_ip");
+		rport = confread_find_value(thisSect,"read_port");
+	
+		if(1)
+		{
+			printf("read config:\n");
+			printf("Listen TCP Data on:%s:%s\n",lhost,lport);
+			printf("Send UDP Data to  :%s:%s\n",phost,pport);
+			printf("Read UDP Data from:%s:%s\n",rhost,rport);
+
+		}
+
+		confread_close(&configFile);
+
+	}
+
+#if 0
 	fd_set client_fds;	//tcp客户端 fd_set
 	fd_set udp_listen;	//udp监听端口 fd_set
 	fd_set read_fds;	//所有需要监听的端口
@@ -58,7 +113,27 @@ int proxy_client(int argc,char *argv[])
 		if(1)	//数据来及tcp客户端
 		{
 			client = list_get_clinet_by_sock()
+			//查看该连接是否已经建立
+			//探测数据，
+			//#ifdef SOCKS5_CHECK
+			//	switch(client->stat)
+			//	{
+			//		case STAT_FIRST:
+			//			//检查版本号....
+			//		case STAT_AUTH:
+			//			//检查用户名密码
+			//		case STAT_CMD_CONNECT:
+			//			//检查白名单
+			//			//检查失败，返回错误信息
+			//			//检查成功，标记为STAT_CONNECTED
+			//		case STAT_CONNECTED:
+			//			//已连接，只转发，不需要需要做任何检查
+			//	}
+			//#endif
+			//	
+			//}
 			//读取tcp数据
+			//
 			ret = client_recv_tcp_msg(client,);
 			//封装数据之后发送到对端
 			ret = client_send_udp_data(client,)
@@ -75,5 +150,39 @@ int proxy_client(int argc,char *argv[])
 
 	}
 
+#endif
+
+	return 0;
 }
 
+
+
+int proxy_ss5_status(client_t *client)
+{
+	switch(client->status)
+	{
+	case S_STATUS_START:
+		client->status = S_STATUS_METHOD;
+		break;
+	case S_STATUS_METHOD:
+		//读两个字节，version和method个数
+		//读出method检查
+		//如果需要用户名密码认证，转到S_STATUS_USER
+		client->status = S_STATUS_USER;
+		break;
+	case S_STATUS_USER:
+		//读取用户名和密码，进行源端认证
+		client->status = S_SATAUS_CMD;
+		break;
+	case S_STATUS_CMD:
+		//注意这里有域名和ip地址两种类型
+		//检查域名或者ip地址白名单
+		break;
+	case S_STATUS_DONE;
+		//不需要做任何操作和检查了
+		break;
+	default:
+		break;
+	}
+
+}

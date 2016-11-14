@@ -13,27 +13,27 @@ OFILES = $(CFILES:%.c=%.o)
 CFLAGS+=-I./inc
 
 
-all : LoadBalance
+all : RequestProxy
 
-LoadBalance: $(OFILES)
-	$(CC) $(OFILES) -o LoadBalance $(CFLAGS)
+RequestProxy: $(OFILES)
+	$(CC) $(OFILES) -o RequestProxy $(CFLAGS)
 
 
 %.o: $(SRC_DIR)/%.c
 	$(CC) -c $(CFLAGS) $<
 
 
-install: LoadBalance
-	@echo "installing LoadBalance to '$(BIN_DIR)'"
+install: RequestProxy
+	@echo "installing RequestProxy to '$(BIN_DIR)'"
 	@install -d -m 755 $(BIN_DIR)
-	@install -m 755 LoadBalance $(BIN_DIR)
+	@install -m 755 RequestProxy $(BIN_DIR)
 
 
 clean:
 	@echo "cleaning up"
-	@rm -f LoadBalance
+	@rm -f RequestProxy
 	@rm -f $(SRC_DIR)/*.o
 
 uninstall:
 	@echo "uninstalling"
-	@rm $(BIN_DIR)/LoadBalance
+	@rm $(BIN_DIR)/RequestProxy

@@ -1,10 +1,12 @@
 
-//#include "common.h"
+#include "common.h"
+#include "proxy_client.h"
+#include "proxy_server.h"
 
 
 
 
-
+#define VERSION "0.1"
 #define DOTEST	1
 
 
@@ -29,19 +31,6 @@ usage(char *prag);
 static void 
 showversion(const int level);
 
-/*
- *	请求服务源端
- *
- **/
-int proxy_client(int argc,char *argv[]);
-/*
- *	请求服务目标端
- *
- **/
-int proxy_server(int argc,char *argv[]);
-
-
-int main(int argc,char *argv[]);
 
 int
 main(int argc,char *argv[])
@@ -55,47 +44,56 @@ main(int argc,char *argv[])
 		switch(ret)
 		{
 			case 's':
-				isserv = 1;
+ 				isserv = 1;
 				break;
 			case 'c':
-				isserv = 0;
-				break;
-			case 'h':
-				usage(agrv[0]);
-				break;
-			case 'v':
-				showversion(0);
+ 				isserv = 0;
 				break;
 			case 'd':
-				//debug;
+ 				//debug;
 				break;
+			case 'v':
+ 				showversion(0);
+			case 'h':
 			default:
-				break;
+ 				usage(argv[0]);
+				exit(1);
 		}
 	}
 
 	ret = 0;
+	if(argc - optind < 1)
+		goto error;
 	if(isserv)
 	{
-		if(argc - optind < 1)
 		ret = proxy_server(argc - optind,argv + optind);
 	}
 	else
 	{
-		ret = proxy_client(argc,argv);
+		ret = proxy_client(argc - optind ,argv + optind);
 	}
 
 	return ret;
+
+error:
+	usage(argv[0]);
+	exit(1);
+
 }
 
 static void
 usage(char *prag)
 {
-	fprintf(stderr,"Usage: \n\t%s [-s | -c | -v | -h]\n",prag);
+	fprintf(stderr,"Usage: \n\t%s [-c | -s | -v | -h] <args>\n",prag);
+	fprintf(stderr," -c		client mode(default,source)\n");
+	fprintf(stderr," -s		server mode(dest)\n");
+	fprintf(stderr," -v		show version info\n");
+	fprintf(stderr," -h		show this message\n");
+	fprintf(stderr," <args>		params for client/server\n");
 }
 
 static void 
 showversion(const int level)
 {
-	fprintf(stderr,"Version 0.1,build: %s-%s\n",__TIME__,__DATE__);
+	fprintf(stderr,"Version %s\nBuild Time: %s %s\n",VERSION,__TIME__,__DATE__);
 }
