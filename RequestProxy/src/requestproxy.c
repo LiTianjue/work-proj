@@ -32,6 +32,7 @@ static void
 showversion(const int level);
 
 
+int g_debug = 0;
 int
 main(int argc,char *argv[])
 {
@@ -50,7 +51,7 @@ main(int argc,char *argv[])
  				isserv = 0;
 				break;
 			case 'd':
- 				//debug;
+ 				g_debug = 1;
 				break;
 			case 'v':
  				showversion(0);

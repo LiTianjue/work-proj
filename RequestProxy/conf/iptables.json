@@ -1,0 +1,15 @@
+{
+	"ip_list":
+	[
+		"172.16.2.16",
+		"172.16.2.198",
+		"www.baidu.com",
+		"www.126.com"
+	],
+	"user_list":
+	[
+		"root:admin",
+		"user1:123123"
+	]
+
+}

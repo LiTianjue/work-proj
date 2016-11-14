@@ -108,19 +108,6 @@ int socks5_userCheck(char *user,char *passwd);
 int socks5_connectCheck(char *ip);
 
 
-#define S_STATUS_START		0x00
-#define S_STATUS_METHOD		0x01
-#define S_STATUS_USER		0x02
-#define S_STATUS_CMD		0x04
-#define S_STATUS_DONE		0x08
-#define S_STATUS_ERROR		0xFF
-
-
-
-
-
-
-
 
 
 

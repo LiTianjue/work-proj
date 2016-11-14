@@ -157,7 +157,6 @@ void *list_get_at(list_t *list, int i)
 int list_get_index(list_t *list, void *obj)
 {
     int i;
-
     for(i = 0; i < list->num_objs; i++)
     {
         if(list->obj_cmp(list->obj_arr[i], obj, list->obj_sz) == 0)

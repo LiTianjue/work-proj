@@ -7,8 +7,8 @@
 
 #include <string.h>
 
-#define SOCKET_TYPE_TCP		1
-#define SOCKET_TYPE_UDP		2
+#define SOCK_TYPE_TCP		1
+#define SOCK_TYPE_UDP		2
 
 
 typedef struct _socket {
@@ -25,7 +25,7 @@ typedef struct _socket {
 #define SOCK_TYPE(s)	((s)->type)
 
 //使用统一的接口来创建UDP和TCP套接字
-socket_t *socket_create(char *host,char *port,int sock_type,int is_serv,int conn);
+//socket_t *socket_create(char *host,char *port,int sock_type,int is_serv,int conn);
 
 
 

@@ -5,24 +5,29 @@
 #include "common.h"
 #include "proxy_client.h"
 #include "confread.h"
+#include "white_list.h"
 
 
 typedef struct _client_params
 {
 	//tcp
 	char tcp_ip[32];
-	int  tcp_port;
+	char  tcp_port[8];
 	//udp
 	char peer_ip[32];
-	int  peer_port;
+	char  peer_port[8];
 	char read_ip[32];
-	int  read_port;
+	char  read_port[8];
 }CLIENT_PARAMS;
+
 
 
 int proxy_client(int argc,char *argv[])
 {
 	char *lhost,*lport,*phost,*pport,*rhost,*rport;
+	char *ipfile = NULL;
+	CLIENT_PARAMS params;
+
 
 	//read config file
 	if(argv > 0)
@@ -47,19 +52,40 @@ int proxy_client(int argc,char *argv[])
 		pport = confread_find_value(thisSect,"peer_port");
 		rhost = confread_find_value(thisSect,"read_ip");
 		rport = confread_find_value(thisSect,"read_port");
+
+		strcpy(params.tcp_ip,lhost);
+		strcpy(params.peer_ip,phost);
+		strcpy(params.read_ip,rhost);
+
+		strcpy(params.tcp_port,lport);
+		strcpy(params.peer_port,pport);
+		strcpy(params.read_port,rport);
 	
-		if(1)
+		if(g_debug)
 		{
 			printf("read config:\n");
-			printf("Listen TCP Data on:%s:%s\n",lhost,lport);
-			printf("Send UDP Data to  :%s:%s\n",phost,pport);
-			printf("Read UDP Data from:%s:%s\n",rhost,rport);
+			printf("Listen TCP Data on:%s:%s\n",params.tcp_ip,params.tcp_port);
+			printf("Send UDP Data to  :%s:%s\n",params.peer_ip,params.peer_port);
+			printf("Read UDP Data from:%s:%s\n",params.read_ip,params.read_port);
 
 		}
+		thisSect = confread_find_section(configFile,"iptables");
+		ipfile = confread_find_value(thisSect,"ip_tables");
+
+		list_t *ip_tables = createIPTables(ipfile);
 
 		confread_close(&configFile);
 
 	}
+
+	/*----  完成读取配置文件，创建白名单 ----*/
+
+	//创建一个tcp套接字用于监听客户端请求
+	//tcp_serv = sock_create(params.tcp_ip,params.tcp_port,SOCK_TYPE_TCP,1,1);
+	
+
+
+
 
 #if 0
 	fd_set client_fds;	//tcp客户端 fd_set
@@ -153,10 +179,12 @@ int proxy_client(int argc,char *argv[])
 #endif
 
 	return 0;
+err_done:
+	return -1;
 }
 
 
-
+#if 0
 int proxy_ss5_status(client_t *client)
 {
 	switch(client->status)
@@ -186,3 +214,4 @@ int proxy_ss5_status(client_t *client)
 	}
 
 }
+#endif

@@ -26,6 +26,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
+#include <error.h>
 
 #define NO_DEBUG     0
 #define DEBUG_LEVEL1 1
@@ -37,6 +39,8 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned long uint32_t;
 #endif
+
+extern int g_debug;
 
 /* cl.exe has a different 'inline' keyword for some dumb reason */
 #ifdef WIN32

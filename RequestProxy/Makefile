@@ -1,6 +1,7 @@
 CC=gcc
 #CFLAGS=-Wall -O3
-CFLAGS= -g
+CFLAGS= -g 
+LDFLAGS= -lm
 
 
 PREFIX=/usr
@@ -8,6 +9,7 @@ BIN_DIR = $(PREFIX)/bin
 
 SRC_DIR = src
 CFILES = $(wildcard $(SRC_DIR)/*.c)
+CFILES += $(wildcard $(SRC_DIR)/json/*.c)
 OFILES = $(CFILES:%.c=%.o)
 
 CFLAGS+=-I./inc
@@ -16,7 +18,7 @@ CFLAGS+=-I./inc
 all : RequestProxy
 
 RequestProxy: $(OFILES)
-	$(CC) $(OFILES) -o RequestProxy $(CFLAGS)
+	$(CC) $(OFILES) -o RequestProxy $(CFLAGS) $(LDFLAGS)
 
 
 %.o: $(SRC_DIR)/%.c
