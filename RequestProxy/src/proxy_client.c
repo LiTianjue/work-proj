@@ -3,9 +3,15 @@
  *
  **/
 #include "common.h"
+#include "client.h"
 #include "proxy_client.h"
 #include "confread.h"
 #include "white_list.h"
+#include "socket.h"
+
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 
 typedef struct _client_params
@@ -21,6 +27,7 @@ typedef struct _client_params
 }CLIENT_PARAMS;
 
 
+int running = 1; // global
 
 int proxy_client(int argc,char *argv[])
 {
@@ -80,106 +87,153 @@ int proxy_client(int argc,char *argv[])
 
 	/*----  完成读取配置文件，创建白名单 ----*/
 
-	//创建一个tcp套接字用于监听客户端请求
-	//tcp_serv = sock_create(params.tcp_ip,params.tcp_port,SOCK_TYPE_TCP,1,1);
+	int ret ;
+	int i;
+	int ipver = SOCK_IPV4;
+	socket_t *tcp_serv = NULL;
+	socket_t *udp_serv = NULL;
+	char addrstr[ADDRSTRLEN];
 	
+	fd_set client_fds;	//客户端套接字
+	fd_set read_fds;	//需要监听的套接字
+	int num_fds;
 
+	list_t *clients = NULL ;			//用于保存客户端回话
+	socket_t *tcp_sock = NULL;			//用于创建新的客户端连接
+	client_t *client = NULL;			//用于创建新的客户端结构
 
-
-
-#if 0
-	fd_set client_fds;	//tcp客户端 fd_set
-	fd_set udp_listen;	//udp监听端口 fd_set
-	fd_set read_fds;	//所有需要监听的端口
-
-	int num_fds;		//fd的数量
-
-	//创建一个空的客户端列表
-	clients = list_create();
-
-	//创建一个tcp监听监听客户端请求
-	tcp_serv = sock_create();
-
-	//创建一个udp监听服务器返回信息
-	udp_serv = sock_create();
-
-	//创建一个发送数据到对端的udpsocket
-	udp_client = sock_create();
-
-	//循环处理
-	
-	while(running)
+	// [1] 创建一个tcp套接字用于监听客户端请求
+	tcp_serv = sock_create(params.tcp_ip,params.tcp_port,SOCK_IPV4,SOCK_TYPE_TCP,1,1);
+	if(debug_level >= DEBUG_LEVEL1)
 	{
-		//监听相关的socket
-		read_fds = client_fds;		//添加所有客户端那的fd
-		FD_SET(tcp_servr,&read_fds);//添加tcp监听端口
-		FD_SET(udp_servr,&read_fds);//添加udp监听端口
-		//使用select 或者 poll
-		ret = select(FD_SETSIZE,&read_fds,NULL,NULL,&timeout);
-		num_fds = ret;
-		
-		//这里要处理timeout同时检查客户端是正常，是否需要发送连接中断信息
-
-		if(FD_ISSET(tcp_server,&read_fds))
-		{
-			//tcp监听口收到数据
-			new_sock = sock_accept(tcp_server);
-			//创建一个新的session
-			//
-			client = client_create(next_req_id++,tcp_sock,udp_sock,1);
-			//将这个session添加到列表中
-			list_add(list,client);
-			//将这个新的客户端的套件子添加到监听列表里
-			client_add_tcp_fd_to_set(client,&client_fds);
-			//这个发送udp是不需要监听的
-			//client_add_udp_fd_to_set(client,&client_fds);
-			
-		}
-
-		if(1)	//数据来及tcp客户端
-		{
-			client = list_get_clinet_by_sock()
-			//查看该连接是否已经建立
-			//探测数据，
-			//#ifdef SOCKS5_CHECK
-			//	switch(client->stat)
-			//	{
-			//		case STAT_FIRST:
-			//			//检查版本号....
-			//		case STAT_AUTH:
-			//			//检查用户名密码
-			//		case STAT_CMD_CONNECT:
-			//			//检查白名单
-			//			//检查失败，返回错误信息
-			//			//检查成功，标记为STAT_CONNECTED
-			//		case STAT_CONNECTED:
-			//			//已连接，只转发，不需要需要做任何检查
-			//	}
-			//#endif
-			//	
-			//}
-			//读取tcp数据
-			//
-			ret = client_recv_tcp_msg(client,);
-			//封装数据之后发送到对端
-			ret = client_send_udp_data(client,)
-		}
-
-		if(2) //数据来自udp服务器
-		{
-			//先读取udp数据包
-			//然后将数据包中的session取出来
-			client = list_get_client_by_session();
-			//将数据解除封装发回源端
-			ret = client_send_tcp_data(client);
-		}
-
+		printf("Listening on TCP %s\n",
+				sock_get_str(tcp_serv,addrstr,sizeof(addrstr)));
+	}
+	//[2] 创建一个udp套接字用于监听服务器返回
+	udp_serv = sock_create(params.read_ip,params.read_port,SOCK_IPV4,SOCK_TYPE_UDP,1,1);
+	if(debug_level >= DEBUG_LEVEL1)
+	{
+		printf("Listening on UDP %s\n",
+				sock_get_str(udp_serv,addrstr,sizeof(addrstr)));
 	}
 
-#endif
+	//[3] 创建一个空的client list列表用于记录和保存会话
+	clients = createClientList();
+	ERROR_GOTO(clients == NULL,"Error creating clients list.",done);
+
+	FD_ZERO(&client_fds);
+	
+	//
+	// main loop ---------------------------
+	//
+	while(running)
+	{
+		read_fds = client_fds;	//添加客户端监听套接字
+		FD_SET(SOCK_FD(tcp_serv),&read_fds);	//添加tcp监听套接字
+		FD_SET(SOCK_FD(udp_serv),&read_fds);	//添加udp监听套接字
+
+		ret = select(FD_SETSIZE,&read_fds,NULL,NULL,NULL);
+		PERROR_GOTO(ret < 0 ,"select",done);
+		num_fds = ret;
+
+		if(num_fds == 0)
+			continue;	//just timeout
+		
+		// [1] 客户端 connect 请求
+		if(FD_ISSET(SOCK_FD(tcp_serv),&read_fds))
+		{
+			tcp_sock = sock_accept(tcp_serv);
+			if(tcp_sock == NULL)
+				continue;
+			if(g_debug)
+			{
+				printf("**** New TCP Client ****\n");
+			}
+			//创建一个新的客户端回话
+			client = client_create(0,tcp_sock,1);
+			if(!client || !tcp_sock)
+			{
+				if(tcp_sock)
+					sock_close(tcp_sock);
+			}
+			else
+			{
+				//添加回话到会话列表
+				client = list_add(clients,client,0);	
+				//添加这个新的连接到client_fds;
+				client_add_tcp_fd_to_set(client,&client_fds);
+				if(g_debug)
+				{
+					sock_send(client->tcp_sock,"hello",6);
+				}
+			}
+			//释放内存
+			sock_free(tcp_sock);
+			tcp_sock = NULL;
+			//select do it
+			num_fds--;
+		}
+
+		// [2] udp服务器接收到数据
+		if(FD_ISSET(SOCK_FD(udp_serv),&read_fds))
+		{
+			if(g_debug)
+				printf("read data from udp port");
+			socket_t from;
+			char buf[1024];
+			
+			ret = sock_recv(udp_serv,&from,buf,1024);
+			if(ret > 0)
+			{
+				if(g_debug)
+					printf("recv udp data [%d]:%s\n",ret,buf);
+			}
+
+			//读取到udp数据报
+			//解析udp数据报，取出session_id;
+			//解析头部的cmd
+			//通过session 找到我们的client
+			//将数据段返回给client
+
+			//select do it
+			num_fds--;
+		}
+
+		// [3] 客户端发来数据
+		for(i = 0; i < LIST_LEN(clients) && num_fds > 0;i++)
+		{
+			client = list_get_at(clients,i);
+			printf("CLIENT[%d]\n",i);
+			if(!client)
+			{
+				printf("Error get Client");
+				continue;
+			}
+			
+			if(num_fds > 0 && client_tcp_fd_isset(client,&read_fds))
+			{
+				int sid = CLIENT_SESSION(client);
+				ret = client_recv_tcp_data(client,1024);
+				if(ret > 0)
+				{
+					if(g_debug)
+					{
+						printf("Recv TCP Data From [%d] %s\n",sid,client->tcp_data.buf);
+					}
+					//接收到数据，要做socks5协议检查
+					//封装成udp数据报发送到对端
+				}
+
+				num_fds--;
+			}
+		}
+	
+	}
+	
+	
 
 	return 0;
-err_done:
+done:
 	return -1;
 }
 

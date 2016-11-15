@@ -9,6 +9,10 @@
 #define VERSION "0.1"
 #define DOTEST	1
 
+int debug_level = NO_DEBUG;
+int g_debug = 0;
+
+
 
 /*
  *  初始化选择,配置文件处理
@@ -32,7 +36,6 @@ static void
 showversion(const int level);
 
 
-int g_debug = 0;
 int
 main(int argc,char *argv[])
 {
@@ -52,6 +55,7 @@ main(int argc,char *argv[])
 				break;
 			case 'd':
  				g_debug = 1;
+				debug_level = DEBUG_LEVEL1;
 				break;
 			case 'v':
  				showversion(0);
