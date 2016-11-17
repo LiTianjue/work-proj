@@ -44,11 +44,23 @@ typedef struct _tcp_data {
 #define PROXY_CMD_DATA		0x01		//普通数据包
 #define PROXY_CMD_CLOSE		0x02		//连接关闭包
 
-
+#define MSG_HEAD_LENGTH	(sizeof(msg_hdr_t))
 #define MSG_VERSION(h)  ((h)->version)
 #define MSG_CMD(h)		((h->cmd))
 #define MSG_SESSION(h)	(ntohs((h)->session_id))
 #define MSG_LENGTH(h)	(ntohs((h)->data_len))
 
+
+
+
+
+
+static _inline_ void msg_init_header(msg_hdr_t *hdr,uint16_t session,uint8_t cmd_type,uint16_t len)
+{
+	hdr->version = P_VERSION;
+	hdr->cmd = cmd_type;
+	hdr->session_id = htons(session);
+	hdr->data_len = htons(len);
+}
 
 #endif

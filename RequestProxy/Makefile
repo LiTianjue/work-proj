@@ -34,7 +34,7 @@ install: RequestProxy
 clean:
 	@echo "cleaning up"
 	@rm -f RequestProxy
-	@rm -f $(SRC_DIR)/*.o
+	@rm -f $(OFILES)
 
 uninstall:
 	@echo "uninstalling"

@@ -92,6 +92,7 @@ int proxy_client(int argc,char *argv[])
 	int ipver = SOCK_IPV4;
 	socket_t *tcp_serv = NULL;
 	socket_t *udp_serv = NULL;
+	socket_t *udp_peer = NULL;	//发送数据到对端
 	char addrstr[ADDRSTRLEN];
 	
 	fd_set client_fds;	//客户端套接字
@@ -117,7 +118,15 @@ int proxy_client(int argc,char *argv[])
 				sock_get_str(udp_serv,addrstr,sizeof(addrstr)));
 	}
 
-	//[3] 创建一个空的client list列表用于记录和保存会话
+	//[3] 创建一个udp套接字用于发送数据到对端
+	udp_peer = sock_create(params.peer_ip,params.peer_port,SOCK_IPV4,SOCK_TYPE_UDP,0,1);
+	if(debug_level >= DEBUG_LEVEL1)
+	{
+		printf("Listening on UDP %s\n",
+				sock_get_str(udp_serv,addrstr,sizeof(addrstr)));
+	}
+
+	//[4] 创建一个空的client list列表用于记录和保存会话
 	clients = createClientList();
 	ERROR_GOTO(clients == NULL,"Error creating clients list.",done);
 
@@ -159,6 +168,7 @@ int proxy_client(int argc,char *argv[])
 			else
 			{
 				//添加回话到会话列表
+				client->sock_id = SOCK_FD(tcp_sock);
 				client = list_add(clients,client,0);	
 				//添加这个新的连接到client_fds;
 				client_add_tcp_fd_to_set(client,&client_fds);
@@ -178,15 +188,45 @@ int proxy_client(int argc,char *argv[])
 		if(FD_ISSET(SOCK_FD(udp_serv),&read_fds))
 		{
 			if(g_debug)
-				printf("read data from udp port");
+				printf("read data from udp port\n");
 			socket_t from;
 			char buf[1024];
+
+			uint16_t sid;
+			uint8_t cmd;
+			uint16_t length;
 			
-			ret = sock_recv(udp_serv,&from,buf,1024);
-			if(ret > 0)
+			ret = client_recv_udp_msg(udp_serv,&from,buf,1024,&sid,&cmd,&length);
+
+			if(ret < 0)
 			{
-				if(g_debug)
-					printf("recv udp data [%d]:%s\n",ret,buf);
+				//if error;
+			}
+			// 通过seesion id 找到客户端会话
+			client = client_find_client_by_session(clients,sid);
+			if(client == NULL)
+			{
+				printf("Client not find .\n");
+			}
+			if(g_debug)
+			{
+				printf("Find Client [%d]\n",client->session_id);
+			}
+
+			// 根据CMD类型进行处理
+			switch(cmd)
+			{
+				case PROXY_CMD_CLOSE:
+					break;
+				case PROXY_CMD_DATA:
+					break;
+				default:
+					break;
+			}
+			if(cmd == PROXY_CMD_DATA)
+			{
+				//处理普通数据，就是原样发回
+				ret = client_send_tcp_data_back(client,buf,length);
 			}
 
 			//读取到udp数据报
@@ -222,6 +262,8 @@ int proxy_client(int argc,char *argv[])
 					}
 					//接收到数据，要做socks5协议检查
 					//封装成udp数据报发送到对端
+					//这里测试用先直接发送到本地服务器
+					client_send_udp_msg(client,udp_peer,PROXY_CMD_DATA);
 				}
 
 				num_fds--;

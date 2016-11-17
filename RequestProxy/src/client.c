@@ -6,12 +6,12 @@
 #include "socket.h"
 #include <string.h>
 
-uint32_t new_session()
+uint16_t new_session()
 {
-	static uint32_t sessionid = 1000;
-	if(sessionid  > 10000)
+	static uint16_t sessionid = 100;
+	if(sessionid  > 1000)
 	{
-		sessionid = 1000;
+		sessionid = 100;
 	}
 	return sessionid++;
 }
@@ -49,14 +49,14 @@ client_t *new_client(uint16_t id,uint32_t session_id,int tcp_socket)
 
 int client_cmp(client_t *c1,client_t *c2,size_t len)
 {
-	if(len == 0)
+	if(c2->session_id > 0)
 	{
-		//find client by session_id;
-	}
-	if(len == 1)
+		return c1->session_id - c2->session_id;
+	}else
 	{
-		//find client by socket num;
+		return c1->sock_id - c2->sock_id;
 	}
+	//
 }
 
 client_t *client_copy(client_t *dst,client_t *src,size_t len)
@@ -126,15 +126,27 @@ int client_recv_tcp_data(client_t *client,int len)
 	return ret;
 }
 
-
-int client_recv_udp_data(socket_t *sock,socket_t *from,char *data,int data_len,uint32_t *session_id,uint8_t *cmd_type)
+int client_send_tcp_data_back(client_t *client,char *data,int len)
 {
-	char buf[1024];
-	msg_hdr_t *head_ptr;
+	int ret ;
+	ret = sock_send(client->tcp_sock,data,len);
+	if(ret < 0)
+		return -1;
+	else if(ret == 0)
+		return -2;
+	else
+		return 0;
+}
+
+
+int client_recv_udp_msg(socket_t *sock,socket_t *from,char *data,int data_len,uint16_t *session_id,uint8_t *cmd_type,uint16_t *length)
+{
+	char buf[DATA_LEN];
+	msg_hdr_t *hdr_ptr;
 	char *msg_ptr;
 	int ret ;
 
-	head_ptr = (msg_hdr_t *)buf;
+	hdr_ptr = (msg_hdr_t *)buf;
 	msg_ptr = buf + sizeof(msg_hdr_t);
 
 
@@ -147,15 +159,121 @@ int client_recv_udp_data(socket_t *sock,socket_t *from,char *data,int data_len,u
 		return -3;
 
 	uint8_t version;
-	version = MSG_VERSION(head_ptr);
+	version = MSG_VERSION(hdr_ptr);
 	if(version != P_VERSION)
 	{
+		if(g_debug)
+		{
+			printf("Recv UDP MSG Unknow Version[%02x\n]",version);
+		}
 		return -4;
 	}
+	*cmd_type = MSG_CMD(hdr_ptr);
+	*session_id = MSG_SESSION(hdr_ptr);
+	*length = MSG_LENGTH(hdr_ptr);
+	
+	if(ret - MSG_HEAD_LENGTH != *length)
+		return -1;
+
+	*length = MIN(data_len,*length);
+	memcpy(data,msg_ptr,*length);
+
+	if(g_debug)
+	{
+		printf("---------- Recv UDP Packet -----------------\n");
+		printf("session_id [%d]\n",*session_id);
+		printf("cmd_type [%02x]\n",*cmd_type);
+		printf("udp data length [%d]\n",*length);
+		printf("msg [%s]\n\n",msg_ptr);
+	}
+
+	return 0;
+}
+
+int client_send_udp_msg(client_t *client,socket_t *peer,uint8_t msg_type)
+{
+	char buf[DATA_MAX];
+	uint16_t data_len;
+	int len;
+	int ret;
 
 	
+	
+	data_len = client->tcp_data.len;
+	if(data_len+ MSG_HEAD_LENGTH > DATA_MAX || data_len < 0)
+	{
+		printf("UDP MSG is too big.\n");
+		return -3;
+	}
+	switch(msg_type)
+	{
+		case PROXY_CMD_CONNECT:
+		case PROXY_CMD_DATA:
+			memcpy(buf+MSG_HEAD_LENGTH,client->tcp_data.buf,client->tcp_data.len);
+			break;
+		case PROXY_CMD_CLOSE:
+			data_len = 0;
+			break;
+		default:
+			return -1;
+	}
+	
+	msg_init_header((msg_hdr_t *)buf,client->session_id,msg_type,data_len);
+	len = data_len + MSG_HEAD_LENGTH;
+
+	ret = sock_send(peer,buf,len);
+	if(len < 0)
+		return -1;
+	else if(len == 0)
+		return -2;
+	else
+		return len;
 
 }
 
 
 
+
+
+static client_t tmp_client;
+
+client_t *client_find_client_by_session(list_t *clients,uint16_t session_id)
+{
+	client_t *c ;
+	tmp_client.session_id = session_id;
+	if(g_debug)
+	{
+	int i  = list_get_index(clients,&tmp_client);
+	printf("get Client index %d\n",i);
+	if(i == -1)
+		return NULL;
+
+	c = (client_t *)(clients->obj_arr[i]);
+	}else
+	{
+		c = (client_t *)list_get(clients,&tmp_client);
+	}
+
+	return c;
+}
+
+client_t *client_find_client_by_sock(list_t *clients,int sock)
+{
+	client_t *c ;
+	tmp_client.session_id = -1;
+	tmp_client.sock_id = sock;
+	if(g_debug)
+	{
+	int i  = list_get_index(clients,&tmp_client);
+	printf("get Client index %d\n",i);
+	if(i == -1)
+		return NULL;
+
+	c = (client_t *)(clients->obj_arr[i]);
+	}else
+	{
+		c = (client_t *)list_get(clients,&tmp_client);
+	}
+
+	return c;
+}

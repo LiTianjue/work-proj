@@ -28,7 +28,8 @@ extern int running;
 typedef struct _client {
 	uint16_t id;
 	uint8_t status;				//会话状态
-	uint32_t session_id;		//标识会话唯一
+	uint16_t session_id;		//标识会话唯一
+	int		 sock_id;			//支持两种查找方法，通过session_id查找，通过sock_id查找
 	int connected;				//标识后端是否已经建立连接
 
 	socket_t *tcp_sock;
@@ -58,17 +59,24 @@ void client_free(client_t *c);
 #define p_client_free ((void (*)(void *))&client_free)
 
 
-int client_send_udp_msg(client_t *client,char *data,int data_len);
-
 list_t *createClientList();
 
+
+/*-----*/
+// 对象查找相关
+client_t *client_find_client_by_session(list_t *clients,uint16_t session_id);
+client_t *client_find_client_by_sock(list_t *clients,int sock_id);
+/*-----*/
 
 
 /*--------------------------------*/
 // 数据处理相关函数
 int client_recv_tcp_data(client_t *client,int len);
+int client_send_tcp_data_back(client_t *client,char *data,int len);
 
-int client_recv_udp_msg(socket_t *sock,socket_t *from,char *data,int data_len,uint32_t *session_id,uint8_t *cmd_type);
+int client_recv_udp_msg(socket_t *sock,socket_t *from,char *data,int data_len,uint16_t *session_id,uint8_t *cmd_type,uint16_t *length);
+
+int client_send_udp_msg(client_t *client,socket_t *peer,uint8_t msg_type);
 
 /*--------------------------------*/
 
