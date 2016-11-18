@@ -1,7 +1,6 @@
 
 #include "common.h"
 #include "proxy_client.h"
-#include "proxy_server.h"
 
 
 
@@ -71,11 +70,12 @@ main(int argc,char *argv[])
 		goto error;
 	if(isserv)
 	{
-		ret = proxy_server(argc - optind,argv + optind);
+		//ret = proxy_server(argc - optind,argv + optind);
+		ret = proxy_client(argc - optind,argv + optind,MODE_REQUEST_SERVER);
 	}
 	else
 	{
-		ret = proxy_client(argc - optind ,argv + optind);
+		ret = proxy_client(argc - optind ,argv + optind,MODE_REQUEST_CLIENT);
 	}
 
 	return ret;

@@ -70,6 +70,9 @@ client_t *client_find_client_by_sock(list_t *clients,int sock_id);
 
 
 /*--------------------------------*/
+void client_disconnect_tcp(client_t *c);
+int client_connect_tcp(client_t *c);
+
 // 数据处理相关函数
 int client_recv_tcp_data(client_t *client,int len);
 int client_send_tcp_data_back(client_t *client,char *data,int len);
@@ -77,6 +80,9 @@ int client_send_tcp_data_back(client_t *client,char *data,int len);
 int client_recv_udp_msg(socket_t *sock,socket_t *from,char *data,int data_len,uint16_t *session_id,uint8_t *cmd_type,uint16_t *length);
 
 int client_send_udp_msg(client_t *client,socket_t *peer,uint8_t msg_type);
+int client_send_close_msg(client_t *client,socket_t *peer);
+
+void disconnect_and_remove_client(list_t *list,client_t *c,fd_set *fds,int full_disconnect);
 
 /*--------------------------------*/
 
@@ -90,11 +96,17 @@ static _inline_ void client_add_tcp_fd_to_set(client_t *c,fd_set *set)
 		FD_SET(SOCK_FD(c->tcp_sock),set);
 }
 
+
 static _inline_ int client_tcp_fd_isset(client_t *c,fd_set *set)
 {
 	return SOCK_FD(c->tcp_sock) >= 0 ? FD_ISSET(SOCK_FD(c->tcp_sock),set) : 0; 
 }
 
+static _inline_ void client_remove_tcp_fd_from_set(client_t *c,fd_set *set)
+{
+	if(SOCK_FD(c->tcp_sock) >= 0)
+		FD_CLR(SOCK_FD(c->tcp_sock),set);
+}
 
 
 

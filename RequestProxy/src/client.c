@@ -8,10 +8,10 @@
 
 uint16_t new_session()
 {
-	static uint16_t sessionid = 100;
-	if(sessionid  > 1000)
+	static uint16_t sessionid = 99;
+	if(sessionid  >= 99999)
 	{
-		sessionid = 100;
+		sessionid = 99;
 	}
 	return sessionid++;
 }
@@ -28,6 +28,7 @@ client_t *client_create(uint16_t id,socket_t *tcp_socket,int connected)
 	c->tcp_sock = sock_copy(tcp_socket);
 	c->connected = 0;
 	c->session_id = new_session();
+	c->tcp_data.len = 0;
 
 
 	return c;
@@ -110,6 +111,28 @@ list_t *createClientList()
 //数据处理相关函数
 /*************************************/
 
+void client_disconnect_tcp(client_t *c)
+{
+	if(c->connected)
+	{
+		sock_close(c->tcp_sock);
+		c->connected = 0;
+	}
+}
+
+int client_connect_tcp(client_t *c)
+{
+	if(!c->connected)
+	{
+		if(sock_connect(c->tcp_sock,0)== 0)
+		{
+			c->connected = 1;
+			return 0;
+		}
+	}
+	return -1;
+}
+
 
 int client_recv_tcp_data(client_t *client,int len)
 {
@@ -180,11 +203,13 @@ int client_recv_udp_msg(socket_t *sock,socket_t *from,char *data,int data_len,ui
 
 	if(g_debug)
 	{
+		/*
 		printf("---------- Recv UDP Packet -----------------\n");
 		printf("session_id [%d]\n",*session_id);
 		printf("cmd_type [%02x]\n",*cmd_type);
 		printf("udp data length [%d]\n",*length);
 		printf("msg [%s]\n\n",msg_ptr);
+		*/
 	}
 
 	return 0;
@@ -231,7 +256,35 @@ int client_send_udp_msg(client_t *client,socket_t *peer,uint8_t msg_type)
 
 }
 
+int client_send_close_msg(client_t *client,socket_t *peer)
+{	
+	client_send_udp_msg(client,peer,PROXY_CMD_CLOSE);
+	
+}
 
+void disconnect_and_remove_client(list_t *list,client_t *c,fd_set *fds,int full_disconnect)
+{
+	if(g_debug)
+	{
+		printf("------> Disconnect and remove Client[%d]\n",c->session_id);
+	}
+
+	if(!c || !list)
+		return;
+
+	client_remove_tcp_fd_from_set(c,fds);
+	client_disconnect_tcp(c);
+
+	if(full_disconnect)
+	{
+		//本来是想在这里发送关闭消息的
+		list_delete(list,c);
+	}
+}
+
+
+
+/***************************************************************/
 
 
 

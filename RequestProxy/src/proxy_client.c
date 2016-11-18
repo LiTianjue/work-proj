@@ -29,11 +29,12 @@ typedef struct _client_params
 
 int running = 1; // global
 
-int proxy_client(int argc,char *argv[])
+int proxy_client(int argc,char *argv[],int mode)
 {
 	char *lhost,*lport,*phost,*pport,*rhost,*rport;
 	char *ipfile = NULL;
 	CLIENT_PARAMS params;
+	list_t *ip_tables = NULL;		//ip 白名单
 
 
 	//read config file
@@ -50,8 +51,8 @@ int proxy_client(int argc,char *argv[])
 		}
 
 		thisSect = confread_find_section(configFile,"tcp");
-		lhost = confread_find_value(thisSect,"listen_ip");
-		lport = confread_find_value(thisSect,"listen_port");
+		lhost = confread_find_value(thisSect,"tcp_ip");
+		lport = confread_find_value(thisSect,"tcp_port");
 		
 
 		thisSect = confread_find_section(configFile,"udp");
@@ -71,16 +72,18 @@ int proxy_client(int argc,char *argv[])
 		if(g_debug)
 		{
 			printf("read config:\n");
-			printf("Listen TCP Data on:%s:%s\n",params.tcp_ip,params.tcp_port);
-			printf("Send UDP Data to  :%s:%s\n",params.peer_ip,params.peer_port);
-			printf("Read UDP Data from:%s:%s\n",params.read_ip,params.read_port);
+			printf("TCP [%s] Addres :%s:%s\n",((mode==MODE_REQUEST_SERVER)?"socks5":"tcp_listen"),params.tcp_ip,params.tcp_port);
+			printf("Peer UDP Address  :%s:%s\n",params.peer_ip,params.peer_port);
+			printf("Local UDP Address:%s:%s\n",params.read_ip,params.read_port);
 
 		}
-		thisSect = confread_find_section(configFile,"iptables");
-		ipfile = confread_find_value(thisSect,"ip_tables");
+		if(mode == MODE_REQUEST_CLIENT)
+		{
+			thisSect = confread_find_section(configFile,"iptables");
+			ipfile = confread_find_value(thisSect,"ip_tables");
 
-		list_t *ip_tables = createIPTables(ipfile);
-
+			ip_tables = createIPTables(ipfile);
+		}
 		confread_close(&configFile);
 
 	}
@@ -99,18 +102,26 @@ int proxy_client(int argc,char *argv[])
 	fd_set read_fds;	//需要监听的套接字
 	int num_fds;
 
-	list_t *clients = NULL ;			//用于保存客户端回话
+	list_t *clients = NULL ;			//用于保存客户端回话的队列
 	socket_t *tcp_sock = NULL;			//用于创建新的客户端连接
 	client_t *client = NULL;			//用于创建新的客户端结构
 
 	// [1] 创建一个tcp套接字用于监听客户端请求
-	tcp_serv = sock_create(params.tcp_ip,params.tcp_port,SOCK_IPV4,SOCK_TYPE_TCP,1,1);
-	if(debug_level >= DEBUG_LEVEL1)
-	{
-		printf("Listening on TCP %s\n",
-				sock_get_str(tcp_serv,addrstr,sizeof(addrstr)));
+	if(mode == MODE_REQUEST_CLIENT) {
+		tcp_serv = sock_create(params.tcp_ip,params.tcp_port,SOCK_IPV4,SOCK_TYPE_TCP,1,1);
+		if(!tcp_serv)
+		{
+			printf("Create Tcp Server Fail.\n");
+			return -1;
+		}
+		if(debug_level >= DEBUG_LEVEL1)
+		{
+			printf("Listening on TCP %s\n",
+					sock_get_str(tcp_serv,addrstr,sizeof(addrstr)));
+		}
 	}
-	//[2] 创建一个udp套接字用于监听服务器返回
+
+	//[2] 创建一个udp套接字用于监听UDP数据报
 	udp_serv = sock_create(params.read_ip,params.read_port,SOCK_IPV4,SOCK_TYPE_UDP,1,1);
 	if(debug_level >= DEBUG_LEVEL1)
 	{
@@ -122,13 +133,17 @@ int proxy_client(int argc,char *argv[])
 	udp_peer = sock_create(params.peer_ip,params.peer_port,SOCK_IPV4,SOCK_TYPE_UDP,0,1);
 	if(debug_level >= DEBUG_LEVEL1)
 	{
-		printf("Listening on UDP %s\n",
+		printf("Send UDP Msg to %s\n",
 				sock_get_str(udp_serv,addrstr,sizeof(addrstr)));
 	}
 
 	//[4] 创建一个空的client list列表用于记录和保存会话
 	clients = createClientList();
 	ERROR_GOTO(clients == NULL,"Error creating clients list.",done);
+
+
+	/*---- 完成socket 的初始化 ----*/
+
 
 	FD_ZERO(&client_fds);
 	
@@ -137,8 +152,20 @@ int proxy_client(int argc,char *argv[])
 	//
 	while(running)
 	{
+		//要先清楚掉标记为未连接的会话
+		for(i = 0; i < LIST_LEN(clients);i++)
+		{
+			client = list_get_at(clients,i);
+			if(client->connected == 0)
+				disconnect_and_remove_client(clients,client,&read_fds,1);
+		}
+
 		read_fds = client_fds;	//添加客户端监听套接字
-		FD_SET(SOCK_FD(tcp_serv),&read_fds);	//添加tcp监听套接字
+		//[1] 添加tcp监听服务
+		if(mode == MODE_REQUEST_CLIENT) {
+			FD_SET(SOCK_FD(tcp_serv),&read_fds);	//添加tcp监听套接字
+		}
+		//[2] 添加udp监听
 		FD_SET(SOCK_FD(udp_serv),&read_fds);	//添加udp监听套接字
 
 		ret = select(FD_SETSIZE,&read_fds,NULL,NULL,NULL);
@@ -148,12 +175,16 @@ int proxy_client(int argc,char *argv[])
 		if(num_fds == 0)
 			continue;	//just timeout
 		
-		// [1] 客户端 connect 请求
-		if(FD_ISSET(SOCK_FD(tcp_serv),&read_fds))
+		// [3] 客户端 connect 请求
+		if(mode==MODE_REQUEST_CLIENT && FD_ISSET(SOCK_FD(tcp_serv),&read_fds))
 		{
 			tcp_sock = sock_accept(tcp_serv);
 			if(tcp_sock == NULL)
+			{
+				if(g_debug)
+					printf("accept Error.\n");
 				continue;
+			}
 			if(g_debug)
 			{
 				printf("**** New TCP Client ****\n");
@@ -163,11 +194,16 @@ int proxy_client(int argc,char *argv[])
 			if(!client || !tcp_sock)
 			{
 				if(tcp_sock)
+				{
 					sock_close(tcp_sock);
+					sock_free(tcp_sock);
+				}
+				continue;
 			}
 			else
 			{
 				//添加回话到会话列表
+				client->connected = 1;
 				client->sock_id = SOCK_FD(tcp_sock);
 				client = list_add(clients,client,0);	
 				//添加这个新的连接到client_fds;
@@ -195,55 +231,166 @@ int proxy_client(int argc,char *argv[])
 			uint16_t sid;
 			uint8_t cmd;
 			uint16_t length;
-			
-			ret = client_recv_udp_msg(udp_serv,&from,buf,1024,&sid,&cmd,&length);
 
+			// 接收数据
+			ret = client_recv_udp_msg(udp_serv,&from,buf,1024,&sid,&cmd,&length);
 			if(ret < 0)
 			{
+				num_fds--;
+				continue;
 				//if error;
 			}
-			// 通过seesion id 找到客户端会话
 			client = client_find_client_by_session(clients,sid);
-			if(client == NULL)
-			{
-				printf("Client not find .\n");
-			}
-			if(g_debug)
-			{
-				printf("Find Client [%d]\n",client->session_id);
+			//[2.1] 请求服务源端收到数据
+			if(mode == MODE_REQUEST_CLIENT){
+				//读取到udp数据报
+				//解析udp数据报，取出session_id;
+				//解析头部的cmd
+				//通过session 找到我们的client
+				//将数据段返回给client
+
+				// 通过seesion id 找到客户端会话
+				if(client == NULL)
+				{
+					printf("Client not find .\n");
+					num_fds--;
+					continue;
+				}
+				if(g_debug)
+				{
+					printf("Find Client [%d]\n",client->session_id);
+				}
+
+				// 根据CMD类型进行处理
+				switch(cmd)
+				{
+					case PROXY_CMD_CLOSE:
+						{
+						//disconnect_and_remove_client(clients,client,&read_fds,1);					
+						client->connected = 0;
+						}
+						continue;
+					case PROXY_CMD_DATA:
+						break;
+					default:
+						break;
+				}
+				if(cmd == PROXY_CMD_DATA)
+				{
+					//处理普通数据，就是原样发回
+					ret = client_send_tcp_data_back(client,buf,length);
+				}
 			}
 
-			// 根据CMD类型进行处理
-			switch(cmd)
+			//[2.2] 请求服务目标端收到数据
+			if(mode == MODE_REQUEST_SERVER)
 			{
-				case PROXY_CMD_CLOSE:
-					break;
-				case PROXY_CMD_DATA:
-					break;
-				default:
-					break;
-			}
-			if(cmd == PROXY_CMD_DATA)
-			{
-				//处理普通数据，就是原样发回
-				ret = client_send_tcp_data_back(client,buf,length);
+				//解析udp数据报，取出session _id,
+				//通过cmd类型判断是否已经存在回话
+				//通过session_id找出回话
+				//通过cmd类型查看是否需要进行特殊操作
+				//不存杂：
+				//	创建一个相同session_id的回话并connect到socks5服务器
+				//	记录套接字到 read_fds
+				//存在：
+				//	解析udp数据，通过tcp套接字发送
+				switch(cmd)
+				{
+					case PROXY_CMD_CLOSE:
+						if(client)
+						{
+							//这里不能直接关闭这个套接字，只能标记为关闭
+							client->connected = 0;
+							num_fds--;
+						}
+						continue;
+					case PROXY_CMD_DATA:
+						break;
+					default:
+						break; 
+				}
+				//if PROXY_CMD_CONNECT
+				{
+					
+					if(client == NULL)
+					{
+						if(g_debug)
+						{
+							printf("Server Create a new Client.\n");
+						}
+						//连接到socks5服务器
+						//创建一个新的client
+						tcp_sock = sock_create(params.tcp_ip,params.tcp_port,SOCK_IPV4,SOCK_TYPE_TCP,0,0);
+						client = client_create(0,tcp_sock,1);
+						if(!tcp_sock || !client)
+						{
+							if(tcp_sock)
+							{
+								sock_close(tcp_sock);
+								sock_free(tcp_sock);
+							}
+							if(client)
+								client_free(client);
+							num_fds--;
+							continue;		
+						}
+						
+						client->sock_id = SOCK_FD(tcp_sock);
+						client->session_id = sid;
+
+						if(client_connect_tcp(client) != 0)
+						{
+							//发送连接关闭消息到对端
+							client_send_close_msg(client,udp_peer);
+							sock_close(tcp_sock);
+							sock_free(tcp_sock);
+							client_free(client);
+							num_fds--;
+							continue;
+						}
+
+						//到这里我们新会话创建完成，添加会话到列表
+						//添加socket 到 client_fds
+						client = list_add(clients,client,0);
+						client_add_tcp_fd_to_set(client,&client_fds);
+						if(g_debug)
+						{
+							printf("add a new client.\n");
+						}
+						sock_free(tcp_sock);
+					}
+				
+				}
+
+				if(cmd == PROXY_CMD_DATA)
+				{
+					//处理普通数据，发送数据到对端
+					ret = client_send_tcp_data_back(client,buf,length);
+					if(ret < 0)
+					{
+						client_send_close_msg(client,udp_peer);
+
+						//disconnect_and_remove_client(clients,client,&read_fds,1);
+						client->connected = 0;
+					}
+				}
+				if(g_debug)
+				{
+					printf("Send a unknow session a message.\n");
+				}
 			}
 
-			//读取到udp数据报
-			//解析udp数据报，取出session_id;
-			//解析头部的cmd
-			//通过session 找到我们的client
-			//将数据段返回给client
 
 			//select do it
 			num_fds--;
 		}
 
-		// [3] 客户端发来数据
+		// [3] tcp端发来数据
 		for(i = 0; i < LIST_LEN(clients) && num_fds > 0;i++)
 		{
 			client = list_get_at(clients,i);
-			printf("CLIENT[%d]\n",i);
+			if(g_debug)
+				printf("handle CLIENT[%d] [%d] -> %d\n",i,num_fds,client->session_id);
 			if(!client)
 			{
 				printf("Error get Client");
@@ -252,21 +399,51 @@ int proxy_client(int argc,char *argv[])
 			
 			if(num_fds > 0 && client_tcp_fd_isset(client,&read_fds))
 			{
+				
 				int sid = CLIENT_SESSION(client);
 				ret = client_recv_tcp_data(client,1024);
 				if(ret > 0)
 				{
 					if(g_debug)
 					{
-						printf("Recv TCP Data From [%d] %s\n",sid,client->tcp_data.buf);
+						//printf("Recv TCP Data From [%d] %s\n",sid,client->tcp_data.buf);
+						printf("Recv TCP Data Sid = [%d]\n",sid);
 					}
+				}
+				else if(ret < 0)
+				{
+					if(g_debug)
+					{
+						printf("Close tcp socket and clean Client.\n");
+					}
+					//发送连接关闭到对端
+					client_send_close_msg(client,udp_peer);
+					//清除回话信息
+					disconnect_and_remove_client(clients,client,&client_fds,1);
+					i--;
+					num_fds--;
+					continue;
+				}
+
+				//[3.1] 来自请求客户端的tcp数据
+				if(mode == MODE_REQUEST_CLIENT) {
 					//接收到数据，要做socks5协议检查
+					//ip地址白名单检查
+					
 					//封装成udp数据报发送到对端
-					//这里测试用先直接发送到本地服务器
+					client_send_udp_msg(client,udp_peer,PROXY_CMD_DATA);
+				}
+				//[3.2] 来自socks5服务器返回的tcp数据
+				else if(mode == MODE_REQUEST_SERVER)
+				{
+					//封装成udp数据报发送到对端
 					client_send_udp_msg(client,udp_peer,PROXY_CMD_DATA);
 				}
 
 				num_fds--;
+			}else
+			{
+				printf("%d fd is set ,but we do nothing.\n",num_fds);
 			}
 		}
 	
