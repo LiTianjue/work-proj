@@ -273,12 +273,24 @@ void disconnect_and_remove_client(list_t *list,client_t *c,fd_set *fds,int full_
 		return;
 
 	client_remove_tcp_fd_from_set(c,fds);
+	if(g_debug)
+	{
+		printf("\t remove_fd_from_set\n");
+		
+	}
 	client_disconnect_tcp(c);
+	if(g_debug)
+	{
+		printf("\t client_disconnect_tcp\n");
+		
+	}
 
 	if(full_disconnect)
 	{
 		//本来是想在这里发送关闭消息的
 		list_delete(list,c);
+		if(g_debug)
+			printf("\t list_delete\n");
 	}
 }
 

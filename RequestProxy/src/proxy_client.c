@@ -153,11 +153,14 @@ int proxy_client(int argc,char *argv[],int mode)
 	while(running)
 	{
 		//要先清楚掉标记为未连接的会话
-		for(i = 0; i < LIST_LEN(clients);i++)
+		if(0)
 		{
-			client = list_get_at(clients,i);
-			if(client->connected == 0)
-				disconnect_and_remove_client(clients,client,&read_fds,1);
+			for(i = 0; i < LIST_LEN(clients);i++)
+			{
+				client = list_get_at(clients,i);
+				if(client->connected == 0)
+					disconnect_and_remove_client(clients,client,&client_fds,1);
+			}
 		}
 
 		read_fds = client_fds;	//添加客户端监听套接字
@@ -266,8 +269,8 @@ int proxy_client(int argc,char *argv[],int mode)
 				{
 					case PROXY_CMD_CLOSE:
 						{
-						//disconnect_and_remove_client(clients,client,&read_fds,1);					
-						client->connected = 0;
+						disconnect_and_remove_client(clients,client,&client_fds,1);					
+						//client->connected = 0;
 						}
 						continue;
 					case PROXY_CMD_DATA:
@@ -299,8 +302,11 @@ int proxy_client(int argc,char *argv[],int mode)
 					case PROXY_CMD_CLOSE:
 						if(client)
 						{
+							if(g_debug)
+								printf("!!! udp_close_msg we close it later\n");
 							//这里不能直接关闭这个套接字，只能标记为关闭
-							client->connected = 0;
+							//client->connected = 0;
+							disconnect_and_remove_client(clients,client,&client_fds,1);
 							num_fds--;
 						}
 						continue;
@@ -370,13 +376,9 @@ int proxy_client(int argc,char *argv[],int mode)
 					{
 						client_send_close_msg(client,udp_peer);
 
-						//disconnect_and_remove_client(clients,client,&read_fds,1);
-						client->connected = 0;
+						disconnect_and_remove_client(clients,client,&client_fds,1);
+						//client->connected = 0;
 					}
-				}
-				if(g_debug)
-				{
-					printf("Send a unknow session a message.\n");
 				}
 			}
 
