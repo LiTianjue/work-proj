@@ -164,7 +164,7 @@ int client_send_tcp_data_back(client_t *client,char *data,int len)
 
 int client_recv_udp_msg(socket_t *sock,socket_t *from,char *data,int data_len,uint16_t *session_id,uint8_t *cmd_type,uint16_t *length)
 {
-	char buf[DATA_LEN];
+	char buf[MSG_LEN];
 	msg_hdr_t *hdr_ptr;
 	char *msg_ptr;
 	int ret ;
@@ -217,7 +217,7 @@ int client_recv_udp_msg(socket_t *sock,socket_t *from,char *data,int data_len,ui
 
 int client_send_udp_msg(client_t *client,socket_t *peer,uint8_t msg_type)
 {
-	char buf[DATA_MAX];
+	char buf[MSG_LEN];
 	uint16_t data_len;
 	int len;
 	int ret;
@@ -225,7 +225,7 @@ int client_send_udp_msg(client_t *client,socket_t *peer,uint8_t msg_type)
 	
 	
 	data_len = client->tcp_data.len;
-	if(data_len+ MSG_HEAD_LENGTH > DATA_MAX || data_len < 0)
+	if(data_len+ MSG_HEAD_LENGTH > MSG_LEN || data_len < 0)
 	{
 		printf("UDP MSG is too big.\n");
 		return -3;

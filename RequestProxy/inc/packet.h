@@ -13,8 +13,7 @@
 
 
 
-#define DATA_LEN	1024
-#define DATA_MAX	1012
+#define MSG_LEN	1024
 
 #define P_VERSION	0x11
 
@@ -26,6 +25,8 @@ typedef struct _udp_head {
 	uint16_t	data_len;
 } msg_hdr_t;
 
+#define DATA_MAX	(1024-sizeof(msg_hdr_t))
+
 typedef struct _udp_data {
 	uint8_t		version;	//0x11
 	uint8_t		cmd;
@@ -34,6 +35,7 @@ typedef struct _udp_data {
 	uint16_t	data_len;
 	uint8_t		data[DATA_MAX];
 } UDP_Packet;
+
 
 typedef struct _tcp_data {
 	uint32_t len;

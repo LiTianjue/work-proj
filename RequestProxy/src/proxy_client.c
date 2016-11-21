@@ -14,6 +14,20 @@
 #include <sys/types.h>
 
 
+static void print_hex(char *tag,char *buf,int len)
+{
+	int i ;
+	if(tag != NULL)
+		printf("[%s] [len = %d]:\n",tag);
+	for(i=0;i<len;i++)
+	{
+		printf("%02X ",buf[i]);
+		if((i+1)%32 == 0)
+			printf("\n");
+	}
+	printf("\n");
+}
+
 typedef struct _client_params
 {
 	//tcp
@@ -211,7 +225,7 @@ int proxy_client(int argc,char *argv[],int mode)
 				client = list_add(clients,client,0);	
 				//添加这个新的连接到client_fds;
 				client_add_tcp_fd_to_set(client,&client_fds);
-				if(g_debug)
+				if(0)
 				{
 					sock_send(client->tcp_sock,"hello",6);
 				}
@@ -237,6 +251,7 @@ int proxy_client(int argc,char *argv[],int mode)
 
 			// 接收数据
 			ret = client_recv_udp_msg(udp_serv,&from,buf,1024,&sid,&cmd,&length);
+			//print_hex("udp recv:",buf,length);
 			if(ret < 0)
 			{
 				num_fds--;
@@ -392,7 +407,7 @@ int proxy_client(int argc,char *argv[],int mode)
 		{
 			client = list_get_at(clients,i);
 			if(g_debug)
-				printf("handle CLIENT[%d] [%d] -> %d\n",i,num_fds,client->session_id);
+				printf(" handle CLIENT[%d] [%d] -> %d\n",i,num_fds,client->session_id);
 			if(!client)
 			{
 				printf("Error get Client");
@@ -403,7 +418,7 @@ int proxy_client(int argc,char *argv[],int mode)
 			{
 				
 				int sid = CLIENT_SESSION(client);
-				ret = client_recv_tcp_data(client,1024);
+				ret = client_recv_tcp_data(client,DATA_MAX);
 				if(ret > 0)
 				{
 					if(g_debug)
@@ -429,10 +444,11 @@ int proxy_client(int argc,char *argv[],int mode)
 
 				//[3.1] 来自请求客户端的tcp数据
 				if(mode == MODE_REQUEST_CLIENT) {
-					//接收到数据，要做socks5协议检查
+					//接 收到数据，要做socks5协议检查
 					//ip地址白名单检查
 					
 					//封装成udp数据报发送到对端
+					//print_hex("tcp recv:",client->tcp_data.buf,client->tcp_data.len);
 					client_send_udp_msg(client,udp_peer,PROXY_CMD_DATA);
 				}
 				//[3.2] 来自socks5服务器返回的tcp数据
