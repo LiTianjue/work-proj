@@ -14,13 +14,14 @@
 #include "packet.h"
 
 //会话状态码
-#define S_STATUS_START      0x00
-#define S_STATUS_METHOD     0x01
-#define S_STATUS_USER       0x02
-#define S_STATUS_CMD        0x04
-#define S_STATUS_DONE       0x08
-#define S_STATUS_CLOSE      0x10
-#define S_STATUS_ERROR		0xFF
+#define CLIENT_STATUS_NEW	    0x00
+#define CLIENT_STATUS_START      0x01
+#define CLIENT_STATUS_METHOD     0x02
+#define CLIENT_STATUS_USER       0x04
+#define CLIENT_STATUS_CMD        0x08
+#define CLIENT_STATUS_DONE       0x10
+#define CLIENT_STATUS_CLOSE      0x20
+#define CLIENT_STATUS_ERROR		0xFF
 
 
 extern int running;
@@ -39,8 +40,7 @@ typedef struct _client {
 	int tcp_client;				//客户端tcp套接字
 	int udp_server;				//udp服务器发送套接字
 
-	//data from tcp to udp
-	list_t *tcp2udp_q;
+	//list_t *tcp2udp_q;
 }client_t;
 
 #define CLIENT_SESSION(c)	((c)->session_id)
@@ -85,6 +85,8 @@ int client_send_close_msg(client_t *client,socket_t *peer);
 void disconnect_and_remove_client(list_t *list,client_t *c,fd_set *fds,int full_disconnect);
 
 /*--------------------------------*/
+// socks5协议处理
+int client_handle_ss5(client_t *client,list_t* ip_list,char *err_code);
 
 
 /**********************/

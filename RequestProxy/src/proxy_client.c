@@ -405,6 +405,7 @@ int proxy_client(int argc,char *argv[],int mode)
 		// [3] tcp端发来数据
 		for(i = 0; i < LIST_LEN(clients) && num_fds > 0;i++)
 		{
+			static char retcode[32] = {0};
 			client = list_get_at(clients,i);
 			if(g_debug)
 				printf(" handle CLIENT[%d] [%d] -> %d\n",i,num_fds,client->session_id);
@@ -449,7 +450,28 @@ int proxy_client(int argc,char *argv[],int mode)
 					
 					//封装成udp数据报发送到对端
 					//print_hex("tcp recv:",client->tcp_data.buf,client->tcp_data.len);
-					client_send_udp_msg(client,udp_peer,PROXY_CMD_DATA);
+					ret = client_handle_ss5(client,ip_tables,retcode);
+					if(ret != 0)
+					{
+						if(ret < 0)
+						{
+							if(client->status == CLIENT_STATUS_NEW)
+							{
+								//直接关闭，不用通知对端
+							} else {
+								//发送关闭消息到对端再关闭
+							}
+						} else {
+							//有错误
+							//返回错误码到客户端
+							//发送关闭消息到对端
+							//清除客户端
+						}
+
+					}else
+					{
+						client_send_udp_msg(client,udp_peer,PROXY_CMD_DATA);
+					}
 				}
 				//[3.2] 来自socks5服务器返回的tcp数据
 				else if(mode == MODE_REQUEST_SERVER)

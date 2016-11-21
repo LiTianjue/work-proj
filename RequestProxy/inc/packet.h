@@ -25,7 +25,7 @@ typedef struct _udp_head {
 	uint16_t	data_len;
 } msg_hdr_t;
 
-#define DATA_MAX	(1024-sizeof(msg_hdr_t))
+#define DATA_MAX	(MSG_LEN-sizeof(msg_hdr_t))
 
 typedef struct _udp_data {
 	uint8_t		version;	//0x11

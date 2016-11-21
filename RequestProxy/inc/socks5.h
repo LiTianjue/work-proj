@@ -4,15 +4,15 @@
 #include <stdint.h>
 
 
+//VERSION
+#define SOCKS5_VERSION		0x05	//socks协议版本号
+//保留位必须被置0
+#define SOCKS5_REV				0x00
 
 #define SOCKS5_METHOD_NOAUTH		0x00	//不需要认证
 #define SOCKS5_METHOD_USER_PSW		0x02	//用户名密码认证
 #define SOCKS5_METHOD_NONE			0xFF	//没有可用的的认证方法
 
-//VERSION
-#define SOCKS5_VERSION		0x05	//socks协议版本号
-//保留位必须被置0
-#define SOCKS5_REV				0x00
 
 //CMD
 #define CMD_CONNECT			0x01
@@ -44,7 +44,7 @@ typedef struct {
 	uint8_t ver;
 	uint8_t nmethods;
 	uint8_t methods[0];
-} socks5_method_req_t
+} socks5_method_req_t;
 
 //socks5方法应答
 typedef struct {

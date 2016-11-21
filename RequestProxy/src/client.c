@@ -4,6 +4,7 @@
  **/
 #include "client.h"
 #include "socket.h"
+#include "socks5.h"
 #include <string.h>
 
 uint16_t new_session()
@@ -24,7 +25,7 @@ client_t *client_create(uint16_t id,socket_t *tcp_socket,int connected)
 		goto error;
 
 	c->id = id;
-	c->status = S_STATUS_START;
+	c->status = CLIENT_STATUS_NEW;
 	c->tcp_sock = sock_copy(tcp_socket);
 	c->connected = 0;
 	c->session_id = new_session();
@@ -341,4 +342,145 @@ client_t *client_find_client_by_sock(list_t *clients,int sock)
 	}
 
 	return c;
+}
+
+
+
+
+int client_handle_ss5(client_t *client,list_t *list,char *err_code)
+{
+	//0		成功
+	//> 0   错误码长度
+	//< 0	出现错误但是不需要返回给客户端
+	
+	int ret = 0;
+	char retcode[32] = {0};
+	if(client->status == CLIENT_STATUS_DONE)
+		return 0;
+
+	socks5_method_req_t *req;			
+	struct ss_requests_frame *frame;	
+
+	char *buf_ptr;
+	int buf_len;
+	buf_ptr = client->tcp_data.buf;
+	buf_len = client->tcp_data.len;
+	if(buf_len < 2)
+	{
+		return -1;	// tcp data
+	}
+
+	switch(client->status)
+	{
+		case CLIENT_STATUS_DONE:
+			return 0;
+		case CLIENT_STATUS_NEW:
+			//检查版本号，认证方法
+			req = (socks5_method_req_t* )buf_ptr;
+			if(req->ver != SOCKS5_VERSION)
+			{
+				//err on version
+				//ret = 2;
+				//retcode[0] = SOCKS5_VERSION;
+				//retcode[1] = 0XFF;
+				ret = -1;
+				break;
+			}
+			if((req->nmethods == 0x01)&&(req->methods[0]==SOCKS5_METHOD_USER_PSW ))
+			{
+				//用户名密码认证子协议
+				client->status = CLIENT_STATUS_USER;
+			}
+			else
+			{
+				;
+			}
+			break;
+		case CLIENT_STATUS_USER:
+			//密码认证子协议
+			if(0)
+			{
+				;
+			}
+			client->status = CLIENT_STATUS_METHOD;
+			break;
+		case CLIENT_STATUS_METHOD:
+			frame  = (struct ss_requests_frame *)buf_ptr;
+			if(frame->ver != SOCKS5_VERSION)
+			{
+			 	//error version
+				ret  = -1;
+				break;
+			}
+			if(frame->cmd == CMD_CONNECT)
+			{
+				if(frame->rsv != SOCKS5_REV)
+				{
+					//error rev;
+					ret = -1;
+					break;
+				}
+				if(frame->atyp == ATYPE_IPV4)
+				{
+					if(1)/*ip allowd*/
+					{
+					
+					}else
+					{
+						ret = 2;
+						retcode[0] = SOCKS5_VERSION;
+						retcode[1] = REP_CONNECT_NOT_ALLOWED;
+						break;
+					}
+
+				}else if(frame->atyp == ATYPE_DOMAINNAME)
+				{
+					if(1)/*ip allowd*/
+					{
+						;
+					}else
+					{
+						ret = 2;
+						retcode[0] = SOCKS5_VERSION;
+						retcode[1] = REP_CONNECT_NOT_ALLOWED;
+						break;
+					}
+					
+				}else if(frame->atyp == ATYPE_IPV6)
+				{
+					;
+				}else
+				{
+					ret = -1;
+					break;
+				}
+			
+			} else if (frame->cmd == CMD_BIND)
+			{
+				;
+			} else if (frame->cmd == CMD_UDP)
+			{
+				;
+			}
+			else
+			{
+				ret = -1;
+				break;
+			}
+			client->status = CLIENT_STATUS_DONE;
+			break;
+
+		default:
+			break;
+	}
+
+	if(ret >  0)
+	{
+		if(retcode != NULL)
+			memcpy(err_code,retcode,ret);
+	
+	}
+	
+	return ret;
+
 }
