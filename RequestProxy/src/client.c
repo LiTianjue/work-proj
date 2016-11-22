@@ -7,6 +7,18 @@
 #include "socks5.h"
 #include <string.h>
 
+static void print_hex(uint8_t *buf,int len)
+{
+	int i;
+	for(i=0;i<len;i++)
+	{
+		printf("%02x ",buf[i]);
+		if((i+1)%16 == 0)
+			printf("\n");
+	}
+	printf("\n");
+}
+
 uint16_t new_session()
 {
 	static uint16_t sessionid = 99;
@@ -355,6 +367,7 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 	
 	int ret = 0;
 	char retcode[32] = {0};
+	uint8_t host[256] = {0};
 	if(client->status == CLIENT_STATUS_DONE)
 		return 0;
 
@@ -422,27 +435,47 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 				}
 				if(frame->atyp == ATYPE_IPV4)
 				{
-					if(1)/*ip allowd*/
+					inet_ntop(AF_INET,frame->dst_addr,host,INET_ADDRSTRLEN);
+					if(g_debug)
 					{
+						printf("Client Try to Connect %s\n",host);
+					}
+					if(check_ip(list,host)==0)/*ip allowd*/
+					{
+						//printf("IP[%s] is allowd\n",host);
 					
 					}else
 					{
-						ret = 2;
+						//printf("IP[%s] is deny\n",host);
 						retcode[0] = SOCKS5_VERSION;
 						retcode[1] = REP_CONNECT_NOT_ALLOWED;
+						retcode[2] = SOCKS5_REV;
+						retcode[3] = ATYPE_IPV4;
+						ret = 4;
 						break;
 					}
 
 				}else if(frame->atyp == ATYPE_DOMAINNAME)
 				{
-					if(1)/*ip allowd*/
+					uint8_t wlen = frame->dst_addr[0];
+					memcpy(host,frame->dst_addr+1,wlen);
+					host[wlen] ='\0';
+					if(g_debug)
 					{
-						;
+						printf("Client Try to Connect DOMAINAME [%s]\n",host);
+					}
+				 
+					if(check_ip(list,host)==0)/*ip allowd*/
+					{
+						//printf("IP[%s] is allowd\n",host);
 					}else
 					{
-						ret = 2;
+						//printf("IP[%s] is deny\n",host);
 						retcode[0] = SOCKS5_VERSION;
 						retcode[1] = REP_CONNECT_NOT_ALLOWED;
+						retcode[2] = SOCKS5_REV;
+						retcode[3] = ATYPE_DOMAINNAME;
+						ret = 4;
 						break;
 					}
 					

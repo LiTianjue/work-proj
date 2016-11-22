@@ -38,7 +38,10 @@ ip_t *ip_copy(ip_t *dst,ip_t *src,size_t len);
 void ip_free(ip_t *ip);
 ip_t *find_ip(list_t *list,const char *ip);
 
+
+//extern
 list_t *createIPTables(char *configfile);
+int check_ip(list_t *list,const char *ip);
 
 
 

@@ -7,7 +7,7 @@
 //VERSION
 #define SOCKS5_VERSION		0x05	//socks协议版本号
 //保留位必须被置0
-#define SOCKS5_REV				0x00
+#define SOCKS5_REV			0x00
 
 #define SOCKS5_METHOD_NOAUTH		0x00	//不需要认证
 #define SOCKS5_METHOD_USER_PSW		0x02	//用户名密码认证

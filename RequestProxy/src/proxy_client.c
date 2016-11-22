@@ -459,14 +459,25 @@ int proxy_client(int argc,char *argv[],int mode)
 							{
 								//直接关闭，不用通知对端
 							} else {
-								//发送关闭消息到对端再关闭
+								//发送连接关闭到对端
+								client_send_close_msg(client,udp_peer);
 							}
 						} else {
 							//有错误
 							//返回错误码到客户端
 							//发送关闭消息到对端
 							//清除客户端
+							if(g_debug)
+							{
+								printf("Connect Address is not allowd\n");
+							}
+							client_send_close_msg(client,udp_peer);
+							ret = client_send_tcp_data_back(client,retcode,10);
 						}
+						disconnect_and_remove_client(clients,client,&client_fds,1);
+
+						num_fds--;
+						continue;
 
 					}else
 					{

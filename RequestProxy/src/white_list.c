@@ -49,14 +49,6 @@ void ip_free(ip_t *ip)
 		free(ip);
 }
 
-ip_t *find_ip(list_t *list,const char *ip)
-{
-	ip_t tmp;
-	strcpy(tmp.ip,ip);
-	ip_t *ret = NULL;
-	ret = (ip_t *)list_get(list,&tmp);
-	return ret;
-}
 
 
 
@@ -128,3 +120,28 @@ list_t *createIPTables(char *configfile)
 }
 
 
+ip_t *find_ip(list_t *list,const char *ip)
+{
+	ip_t tmp;
+	strcpy(tmp.ip,ip);
+	ip_t *ret = NULL;
+	ret = (ip_t *)list_get(list,&tmp);
+	return ret;
+}
+
+// 0 find
+// others not find
+static ip_t ip_tmp;
+int  check_ip(list_t *list,const char *ip)
+{
+	if(ip != NULL)
+	{
+		strcpy(ip_tmp.ip,ip);
+		ip_t *ipret = NULL;
+		ipret = (ip_t *)list_get(list,&ip_tmp);
+		if(ipret != NULL)
+			return 0;
+	}
+
+	return -1;
+}
