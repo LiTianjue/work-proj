@@ -406,7 +406,8 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 			}
 			else
 			{
-				;
+				// fixme:
+				client->status = CLIENT_STATUS_DONE;
 			}
 			break;
 		case CLIENT_STATUS_USER:
@@ -481,7 +482,8 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 					
 				}else if(frame->atyp == ATYPE_IPV6)
 				{
-					;
+					// fixme:
+					client->status = CLIENT_STATUS_DONE;
 				}else
 				{
 					ret = -1;
@@ -500,6 +502,7 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 				ret = -1;
 				break;
 			}
+			// fixme:
 			client->status = CLIENT_STATUS_DONE;
 			break;
 
