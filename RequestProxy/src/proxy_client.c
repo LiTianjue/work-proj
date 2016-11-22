@@ -494,7 +494,7 @@ int proxy_client(int argc,char *argv[],int mode)
 				num_fds--;
 			}else
 			{
-				printf("%d fd is set ,but we do nothing.\n",num_fds);
+				//printf("%d fd is set ,but we do nothing.\n",num_fds);
 			}
 		}
 	

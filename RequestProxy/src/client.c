@@ -441,7 +441,7 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 					{
 						printf("Client Try to Connect %s\n",host);
 					}
-					if(check_ip(list,host)==0)/*ip allowd*/
+					if((g_debug == -2) || check_ip(list,host)==0)/*ip allowd*/
 					{
 						//printf("IP[%s] is allowd\n",host);
 					
@@ -466,7 +466,7 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 						printf("Client Try to Connect DOMAINAME [%s]\n",host);
 					}
 				 
-					if(check_ip(list,host)==0)/*ip allowd*/
+					if((g_debug == -2) || check_ip(list,host)==0)/*ip allowd*/
 					{
 						//printf("IP[%s] is allowd\n",host);
 					}else

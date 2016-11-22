@@ -42,7 +42,7 @@ main(int argc,char *argv[])
 	int isserv = 0;		//默认启动请求服务器源端(proxy_client)
 
 	//读取配置信息
-	while((ret = getopt(argc,argv,"hscvd")) != EOF)
+	while((ret = getopt(argc,argv,"hscvdi")) != EOF)
 	{
 		switch(ret)
 		{
@@ -55,6 +55,9 @@ main(int argc,char *argv[])
 			case 'd':
  				g_debug = 1;
 				debug_level = DEBUG_LEVEL1;
+				break;
+			case 'i':
+ 				g_debug = -2;
 				break;
 			case 'v':
  				showversion(0);
