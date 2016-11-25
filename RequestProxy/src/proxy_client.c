@@ -14,6 +14,8 @@
 #include <sys/types.h>
 
 
+int ip_verify = 1;
+
 static void print_hex(char *tag,char *buf,int len)
 {
 	int i ;
@@ -45,7 +47,7 @@ int running = 1; // global
 
 int proxy_client(int argc,char *argv[],int mode)
 {
-	char *lhost,*lport,*phost,*pport,*rhost,*rport;
+	char *lhost,*lport,*phost,*pport,*rhost,*rport,*use_ip_verify;
 	char *ipfile = NULL;
 	CLIENT_PARAMS params;
 	list_t *ip_tables = NULL;		//ip 白名单
@@ -95,8 +97,28 @@ int proxy_client(int argc,char *argv[],int mode)
 		{
 			thisSect = confread_find_section(configFile,"iptables");
 			ipfile = confread_find_value(thisSect,"ip_tables");
-
+			use_ip_verify = confread_find_value(thisSect,"ip_verify");
 			ip_tables = createIPTables(ipfile);
+
+			if(use_ip_verify != NULL)
+			{
+				//printf("set ip verify[%s].\n",use_ip_verify);
+				if(!strcmp(use_ip_verify,"true"))
+				{
+					ip_verify = 1;
+				}else
+				{
+				 	fprintf(stderr,"[Note] IP_verify not set.\n");
+					ip_verify = 0;
+				}
+			}
+			if(ip_verify == 1 && ip_tables==NULL)
+			{
+				fprintf(stderr,"IP_verify is set ,but Init iptables Error \n");
+				confread_close(&configFile);
+				return -1;
+			}
+
 		}
 		confread_close(&configFile);
 

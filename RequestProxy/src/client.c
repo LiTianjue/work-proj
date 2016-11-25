@@ -441,7 +441,7 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 					{
 						printf("Client Try to Connect %s\n",host);
 					}
-					if((g_debug == -2) || check_ip(list,host)==0)/*ip allowd*/
+					if((ip_verify == 0) || check_ip(list,host)==0)/*ip allowd*/
 					{
 						//printf("IP[%s] is allowd\n",host);
 					
@@ -466,7 +466,7 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 						printf("Client Try to Connect DOMAINAME [%s]\n",host);
 					}
 				 
-					if((g_debug == -2) || check_ip(list,host)==0)/*ip allowd*/
+					if((ip_verify == 0) || check_ip(list,host)==0)/*ip allowd*/
 					{
 						//printf("IP[%s] is allowd\n",host);
 					}else
@@ -477,17 +477,17 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 						retcode[2] = SOCKS5_REV;
 						retcode[3] = ATYPE_DOMAINNAME;
 						ret = 4;
-						break;
+						break; 
 					}
 					
 				}else if(frame->atyp == ATYPE_IPV6)
-				{
+				{ 
 					// fixme:
-					client->status = CLIENT_STATUS_DONE;
+				 	client->status = CLIENT_STATUS_DONE;
 				}else
 				{
 					ret = -1;
-					break;
+				 	break;
 				}
 			
 			} else if (frame->cmd == CMD_BIND)

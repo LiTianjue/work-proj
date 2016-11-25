@@ -41,6 +41,7 @@ typedef unsigned long uint32_t;
 #endif
 
 extern int g_debug;
+extern int ip_verify;
 extern int debug_level;
 
 /* cl.exe has a different 'inline' keyword for some dumb reason */

@@ -151,6 +151,10 @@ int sock_connect(socket_t *sock, int is_serv)
     
     if(is_serv)
     {
+		//add socket SO_REUSEADDR
+		int opt = 1;
+		setsockopt(sock->fd,SOL_SOCKET,SO_REUSEADDR,(const void *)&opt,sizeof(opt));
+		
         /* Bind socket to address and port */
         ret = bind(sock->fd, paddr, sock->addr_len);
         PERROR_GOTO(ret != 0, "bind", error);
