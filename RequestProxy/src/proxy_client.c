@@ -87,10 +87,11 @@ int proxy_client(int argc,char *argv[],int mode)
 	
 		if(g_debug)
 		{
-			printf("read config:\n");
+			printf("----read config----:\n");
 			printf("TCP [%s] Addres :%s:%s\n",((mode==MODE_REQUEST_SERVER)?"socks5":"tcp_listen"),params.tcp_ip,params.tcp_port);
 			printf("Peer UDP Address  :%s:%s\n",params.peer_ip,params.peer_port);
 			printf("Local UDP Address:%s:%s\n",params.read_ip,params.read_port);
+			printf("----read done----:\n");
 
 		}
 		if(mode == MODE_REQUEST_CLIENT)
@@ -108,7 +109,6 @@ int proxy_client(int argc,char *argv[],int mode)
 					ip_verify = 1;
 				}else
 				{
-				 	fprintf(stderr,"[Note] IP_verify not set.\n");
 					ip_verify = 0;
 				}
 			}
@@ -119,6 +119,13 @@ int proxy_client(int argc,char *argv[],int mode)
 				return -1;
 			}
 
+			if(g_debug)
+			{
+				if(ip_verify == 1)
+					fprintf(stderr,"[ IP Tables ] IP_verify is set.\n");
+				else
+					fprintf(stderr,"[ IP Tables ] IP_verify not set.\n");
+			}
 		}
 		confread_close(&configFile);
 
@@ -150,28 +157,34 @@ int proxy_client(int argc,char *argv[],int mode)
 			printf("Create Tcp Server Fail.\n");
 			return -1;
 		}
+		/*
 		if(debug_level >= DEBUG_LEVEL1)
 		{
 			printf("Listening on TCP %s\n",
 					sock_get_str(tcp_serv,addrstr,sizeof(addrstr)));
 		}
+		*/
 	}
 
 	//[2] 创建一个udp套接字用于监听UDP数据报
 	udp_serv = sock_create(params.read_ip,params.read_port,SOCK_IPV4,SOCK_TYPE_UDP,1,1);
+	/*
 	if(debug_level >= DEBUG_LEVEL1)
 	{
 		printf("Listening on UDP %s\n",
 				sock_get_str(udp_serv,addrstr,sizeof(addrstr)));
 	}
+	*/
 
 	//[3] 创建一个udp套接字用于发送数据到对端
 	udp_peer = sock_create(params.peer_ip,params.peer_port,SOCK_IPV4,SOCK_TYPE_UDP,0,1);
+	/*
 	if(debug_level >= DEBUG_LEVEL1)
 	{
 		printf("Send UDP Msg to %s\n",
 				sock_get_str(udp_peer,addrstr,sizeof(addrstr)));
 	}
+	*/
 
 	//[4] 创建一个空的client list列表用于记录和保存会话
 	clients = createClientList();
@@ -221,7 +234,7 @@ int proxy_client(int argc,char *argv[],int mode)
 			if(tcp_sock == NULL)
 			{
 				if(g_debug)
-					printf("accept Error.\n");
+					fprintf(stderr,"[ Error ]accept Error.\n");
 				continue;
 			}
 			if(g_debug)
@@ -262,8 +275,6 @@ int proxy_client(int argc,char *argv[],int mode)
 		// [2] udp服务器接收到数据
 		if(FD_ISSET(SOCK_FD(udp_serv),&read_fds))
 		{
-			if(g_debug)
-				printf("read data from udp port\n");
 			socket_t from;
 			char buf[1024];
 
@@ -273,6 +284,8 @@ int proxy_client(int argc,char *argv[],int mode)
 
 			// 接收数据
 			ret = client_recv_udp_msg(udp_serv,&from,buf,1024,&sid,&cmd,&length);
+			if(g_debug)
+				printf("read data from udp port[%d]\n",ret);
 			//print_hex("udp recv:",buf,length);
 			if(ret < 0)
 			{
@@ -292,14 +305,16 @@ int proxy_client(int argc,char *argv[],int mode)
 				// 通过seesion id 找到客户端会话
 				if(client == NULL)
 				{
-					printf("Client not find .\n");
+					//printf("Client not find .\n");
 					num_fds--;
 					continue;
 				}
+				/*
 				if(g_debug)
 				{
 					printf("Find Client [%d]\n",client->session_id);
 				}
+				*/
 
 				// 根据CMD类型进行处理
 				switch(cmd)
@@ -447,7 +462,7 @@ int proxy_client(int argc,char *argv[],int mode)
 					if(g_debug)
 					{
 						//printf("Recv TCP Data From [%d] %s\n",sid,client->tcp_data.buf);
-						printf("Recv TCP Data Sid = [%d]\n",sid);
+						//printf("Recv TCP Data Sid = [%d]\n",sid);
 					}
 				}
 				else if(ret < 0)
@@ -489,10 +504,13 @@ int proxy_client(int argc,char *argv[],int mode)
 							//返回错误码到客户端
 							//发送关闭消息到对端
 							//清除客户端
+
+							/*
 							if(g_debug)
 							{
 								printf("Connect Address is not allowd\n");
 							}
+							*/
 							client_send_close_msg(client,udp_peer);
 							ret = client_send_tcp_data_back(client,retcode,10);
 						}

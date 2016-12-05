@@ -286,24 +286,29 @@ void disconnect_and_remove_client(list_t *list,client_t *c,fd_set *fds,int full_
 		return;
 
 	client_remove_tcp_fd_from_set(c,fds);
+	/*
 	if(g_debug)
 	{
 		printf("\t remove_fd_from_set\n");
 		
 	}
+	*/
 	client_disconnect_tcp(c);
+	/*
 	if(g_debug)
 	{
 		printf("\t client_disconnect_tcp\n");
-		
 	}
+	*/
 
 	if(full_disconnect)
 	{
 		//本来是想在这里发送关闭消息的
 		list_delete(list,c);
+		/*
 		if(g_debug)
 			printf("\t list_delete\n");
+		*/
 	}
 }
 
@@ -437,16 +442,16 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 				if(frame->atyp == ATYPE_IPV4)
 				{
 					inet_ntop(AF_INET,frame->dst_addr,host,INET_ADDRSTRLEN);
-					if(g_debug)
-					{
-						printf("Client Try to Connect %s\n",host);
-					}
 					if((ip_verify == 0) || check_ip(list,host)==0)/*ip allowd*/
 					{
+						if(g_debug)
+							printf("[Allow]Client Try to Connect [%s] allowd\n",host);
 						//printf("IP[%s] is allowd\n",host);
 					
 					}else
 					{
+						if(g_debug)
+							printf("[Refuse]Client Try to Connect [%s] refuse\n",host);
 						//printf("IP[%s] is deny\n",host);
 						retcode[0] = SOCKS5_VERSION;
 						retcode[1] = REP_CONNECT_NOT_ALLOWED;
@@ -461,17 +466,15 @@ int client_handle_ss5(client_t *client,list_t *list,char *err_code)
 					uint8_t wlen = frame->dst_addr[0];
 					memcpy(host,frame->dst_addr+1,wlen);
 					host[wlen] ='\0';
-					if(g_debug)
-					{
-						printf("Client Try to Connect DOMAINAME [%s]\n",host);
-					}
 				 
 					if((ip_verify == 0) || check_ip(list,host)==0)/*ip allowd*/
 					{
-						//printf("IP[%s] is allowd\n",host);
+						if(g_debug)
+							printf("[Allow]Client Try to Connect [%s] allowd\n",host);
 					}else
 					{
-						//printf("IP[%s] is deny\n",host);
+						if(g_debug)
+							printf("[Refuse]Client Try to Connect [%s] refuse\n",host);
 						retcode[0] = SOCKS5_VERSION;
 						retcode[1] = REP_CONNECT_NOT_ALLOWED;
 						retcode[2] = SOCKS5_REV;
