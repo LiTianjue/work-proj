@@ -170,7 +170,7 @@ int proxy_client(int argc,char *argv[],int mode)
 	if(debug_level >= DEBUG_LEVEL1)
 	{
 		printf("Send UDP Msg to %s\n",
-				sock_get_str(udp_serv,addrstr,sizeof(addrstr)));
+				sock_get_str(udp_peer,addrstr,sizeof(addrstr)));
 	}
 
 	//[4] 创建一个空的client list列表用于记录和保存会话
