@@ -2,6 +2,8 @@
 #include "common.h"
 #include "proxy_client.h"
 
+#include <signal.h>
+
 
 
 
@@ -38,6 +40,7 @@ showversion(const int level);
 int
 main(int argc,char *argv[])
 {
+	signal(SIGPIPE,SIG_IGN);
 	int ret;
 	int isserv = 0;		//默认启动请求服务器源端(proxy_client)
 
