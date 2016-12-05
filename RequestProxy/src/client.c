@@ -327,7 +327,7 @@ client_t *client_find_client_by_session(list_t *clients,uint16_t session_id)
 	if(g_debug)
 	{
 	int i  = list_get_index(clients,&tmp_client);
-	printf("get Client index %d\n",i);
+	//printf("get Client index %d\n",i);
 	if(i == -1)
 		return NULL;
 

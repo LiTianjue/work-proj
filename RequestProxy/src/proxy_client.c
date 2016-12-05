@@ -284,8 +284,10 @@ int proxy_client(int argc,char *argv[],int mode)
 
 			// 接收数据
 			ret = client_recv_udp_msg(udp_serv,&from,buf,1024,&sid,&cmd,&length);
+			/*
 			if(g_debug)
 				printf("read data from udp port[%d]\n",ret);
+				*/
 			//print_hex("udp recv:",buf,length);
 			if(ret < 0)
 			{
@@ -309,12 +311,12 @@ int proxy_client(int argc,char *argv[],int mode)
 					num_fds--;
 					continue;
 				}
-				/*
+				
 				if(g_debug)
 				{
-					printf("Find Client [%d]\n",client->session_id);
+					//printf("Find Client [%d]\n",client->session_id);
 				}
-				*/
+			
 
 				// 根据CMD类型进行处理
 				switch(cmd)
@@ -334,6 +336,17 @@ int proxy_client(int argc,char *argv[],int mode)
 				{
 					//处理普通数据，就是原样发回
 					ret = client_send_tcp_data_back(client,buf,length);
+					if(ret < 0)
+					{
+						//发送连接关闭到对端
+						client_send_close_msg(client,udp_peer);
+						//清除回话信息
+						disconnect_and_remove_client(clients,client,&client_fds,1);
+						i--;
+						num_fds--;
+						continue;
+						//
+					}
 				}
 			}
 
@@ -444,8 +457,6 @@ int proxy_client(int argc,char *argv[],int mode)
 		{
 			static char retcode[32] = {0};
 			client = list_get_at(clients,i);
-			if(g_debug)
-				printf(" handle CLIENT[%d] [%d] -> %d\n",i,num_fds,client->session_id);
 			if(!client)
 			{
 				printf("Error get Client");
@@ -454,6 +465,8 @@ int proxy_client(int argc,char *argv[],int mode)
 			
 			if(num_fds > 0 && client_tcp_fd_isset(client,&read_fds))
 			{
+				if(g_debug)
+					printf(" handle CLIENT[%d] [%d] -> %d\n",i,num_fds,client->session_id);
 				
 				int sid = CLIENT_SESSION(client);
 				ret = client_recv_tcp_data(client,DATA_MAX);
@@ -461,15 +474,15 @@ int proxy_client(int argc,char *argv[],int mode)
 				{
 					if(g_debug)
 					{
-						//printf("Recv TCP Data From [%d] %s\n",sid,client->tcp_data.buf);
-						//printf("Recv TCP Data Sid = [%d]\n",sid);
+						//fprintf(stderr,"Recv TCP Data From [%d] %s\n",sid,client->tcp_data.buf);
+						printf("Recv TCP Data Sid = [%d]\n",sid);
 					}
 				}
 				else if(ret < 0)
 				{
 					if(g_debug)
 					{
-						printf("Close tcp socket and clean Client.\n");
+						fprintf(stderr,"Close tcp socket and clean Client[%d].\n",client->session_id);
 					}
 					//发送连接关闭到对端
 					client_send_close_msg(client,udp_peer);
@@ -512,7 +525,10 @@ int proxy_client(int argc,char *argv[],int mode)
 							}
 							*/
 							client_send_close_msg(client,udp_peer);
+							
+							fprintf(stderr,"send msg back\n");
 							ret = client_send_tcp_data_back(client,retcode,10);
+							fprintf(stderr,"send msg done\n");
 						}
 						disconnect_and_remove_client(clients,client,&client_fds,1);
 
