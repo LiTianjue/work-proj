@@ -7,7 +7,7 @@
 
 
 
-#define VERSION "0.1.1"
+#define VERSION "0.1.2"
 #define DOTEST	1
 
 int debug_level = NO_DEBUG;
