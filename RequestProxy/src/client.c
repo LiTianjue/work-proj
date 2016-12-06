@@ -42,6 +42,8 @@ client_t *client_create(uint16_t id,socket_t *tcp_socket,int connected)
 	c->connected = 0;
 	c->session_id = new_session();
 	c->tcp_data.len = 0;
+	c->pack_count = 0;
+	c->suspend = CLIENT_UNSUSPEND;
 
 
 	return c;

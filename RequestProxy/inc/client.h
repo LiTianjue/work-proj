@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <time.h>
 
 #include "common.h"
 #include "list.h"
@@ -24,6 +25,9 @@
 #define CLIENT_STATUS_ERROR		0xFF
 
 
+#define CLIENT_UNSUSPEND		0
+#define CLIENT_SUSPEND			1
+
 extern int running;
 
 typedef struct _client {
@@ -40,12 +44,22 @@ typedef struct _client {
 	int tcp_client;				//客户端tcp套接字
 	int udp_server;				//udp服务器发送套接字
 
+	int pack_count;
+	int suspend;
+	struct timeval suspend_interval;
+
 	//list_t *tcp2udp_q;
 }client_t;
 
 #define CLIENT_SESSION(c)	((c)->session_id)
 #define CLIENT_SOCKET(c)	((c)->tcp_client)
 #define CLIENT_STATUS(c)	((c)->status)
+
+#define CLIENT_PACK_COUNT(c)	((c)->pack_count)
+
+#define SUSPEND_CLIENT(c)	((c)->suspend=CLIENT_SUSPEND)
+#define UNSUSPEND_CLIENT(c)	((c)->suspend=CLIENT_UNSUSPEND)
+#define CLIENT_ISSUSPEND(c)	((c)->suspend)
 
 client_t *client_create(uint16_t id,socket_t *tcp_socket,int connected);
 client_t *new_client(uint16_t id,uint32_t session_id,int tcp_socket);
@@ -110,6 +124,12 @@ static _inline_ void client_remove_tcp_fd_from_set(client_t *c,fd_set *set)
 		FD_CLR(SOCK_FD(c->tcp_sock),set);
 }
 
+static _inline_ int client_has_big_pack(client_t *c,int n)
+{
+
+	//return  ((c->pack_count < 2*n)? 1 : (c->pack_count +1 )% (n));
+	return (c->pack_count + 1) % n;
+}
 
 
 

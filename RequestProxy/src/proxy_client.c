@@ -199,8 +199,23 @@ int proxy_client(int argc,char *argv[],int mode)
 	//
 	// main loop ---------------------------
 	//
+	//add timeout
+	struct timeval timeout;
+	struct timeval curr_time;
+	struct timeval check_time;
+	struct timeval check_interval;
+
+	/* Initializa all the timers */
+	timerclear(&timeout);
+	check_interval.tv_sec = 1;
+	check_interval.tv_usec = 0;
+
+	gettimeofday(&check_time,NULL);
 	while(running)
 	{
+		if(!timerisset(&timeout))
+			timeout.tv_sec = 1;
+
 		//要先清楚掉标记为未连接的会话
 		if(0)
 		{
@@ -220,12 +235,50 @@ int proxy_client(int argc,char *argv[],int mode)
 		//[2] 添加udp监听
 		FD_SET(SOCK_FD(udp_serv),&read_fds);	//添加udp监听套接字
 
-		ret = select(FD_SETSIZE,&read_fds,NULL,NULL,NULL);
+	//	ret = select(FD_SETSIZE,&read_fds,NULL,NULL,NULL);
+		ret = select(FD_SETSIZE,&read_fds,NULL,NULL,&timeout);
+
+
 		PERROR_GOTO(ret < 0 ,"select",done);
 		num_fds = ret;
 
-		if(num_fds == 0)
-			continue;	//just timeout
+		gettimeofday(&curr_time,NULL);
+
+		if(num_fds == 0 || timercmp(&curr_time,&check_time,>))
+		{
+			timeradd(&curr_time,&check_interval,&check_time);
+			if(mode == MODE_REQUEST_CLIENT){	/* 请求服务源端 */
+				continue;	//just timeout
+			}
+			else{	/* 请求服务目标端 */
+
+				for(i = 0; i < LIST_LEN(clients);i++)
+				{
+					client = list_get_at(clients,i);
+					if(CLIENT_ISSUSPEND(client)) {
+						if(timercmp(&curr_time,&(client->suspend_interval),>))
+						{
+							if(client->pack_count < 100){
+								//printf("sleep for 1 sec.\n");
+								client->pack_count+=10;
+								timeradd(&curr_time,&check_interval,&(client->suspend_interval));
+							}else{
+								//printf("---->> Timeout to Unsuspend.\n");
+								UNSUSPEND_CLIENT(client);
+								client->pack_count +=10;
+								client_add_tcp_fd_to_set(client,&client_fds);
+							}
+						}
+					}
+				}
+
+				continue;
+			}
+
+		}
+
+
+
 		
 		// [3] 客户端 connect 请求
 		if(mode==MODE_REQUEST_CLIENT && FD_ISSET(SOCK_FD(tcp_serv),&read_fds))
@@ -233,7 +286,7 @@ int proxy_client(int argc,char *argv[],int mode)
 			tcp_sock = sock_accept(tcp_serv);
 			if(tcp_sock == NULL)
 			{
-				if(g_debug)
+				if(g_debug) 
 					fprintf(stderr,"[ Error ]accept Error.\n");
 				continue;
 			}
@@ -333,9 +386,40 @@ int proxy_client(int argc,char *argv[],int mode)
 						break;
 				}
 				if(cmd == PROXY_CMD_DATA)
-				{
-					//处理普通数据，就是原样发回
+				{	
+#if 0
+					if(1)
+					{
+						struct timeval tv;
+						tv.tv_sec = 0;
+						tv.tv_usec = 0;
+						fd_set t_set1;
+						FD_ZERO(&t_set1);
+						FD_SET(client->tcp_sock->fd,&t_set1);
+						int h = 0;
+
+						h = select(client->tcp_sock->fd+1,NULL,&t_set1,NULL,&tv);
+						if(h < 0)
+						{
+							perror("==============select");
+						}
+						else if(h == 0)
+						{
+							fprintf(stderr,"----->Select timeout.\n");
+						}
+						else
+						{
+							fprintf(stderr,"Select count[%d].\n",h);
+						}
+					}
+#endif
+
+
+					//处理普通数据，就是原样发回 源端
+					//fprintf(stderr,"send data :--->");
 					ret = client_send_tcp_data_back(client,buf,length);
+					//ret = send(client->tcp_sock->fd,buf,length,0);
+					//fprintf(stderr," back:--->ret [%d]\n",ret);
 					if(ret < 0)
 					{
 						//发送连接关闭到对端
@@ -469,9 +553,30 @@ int proxy_client(int argc,char *argv[],int mode)
 					printf(" handle CLIENT[%d] [%d] -> %d\n",i,num_fds,client->session_id);
 				
 				int sid = CLIENT_SESSION(client);
+
+				if(mode == MODE_REQUEST_SERVER){
+					//如果包个数超过50个，判定为大文件
+					if(!client_has_big_pack(client,50))
+					{
+						if(!CLIENT_ISSUSPEND(client))
+						{
+							timeradd(&curr_time,&check_interval,&(client->suspend_interval));
+							//printf("===Suspend client[%d] ===========\n",client->pack_count);
+							SUSPEND_CLIENT(client);	//挂起客户端
+							client->pack_count++;
+							client_remove_tcp_fd_from_set(client,&client_fds);
+						}
+						continue;
+					}
+				
+				}
+
+				
 				ret = client_recv_tcp_data(client,DATA_MAX);
+
 				if(ret > 0)
 				{
+					client->pack_count++;
 					if(g_debug)
 					{
 						//fprintf(stderr,"Recv TCP Data From [%d] %s\n",sid,client->tcp_data.buf);
@@ -526,9 +631,7 @@ int proxy_client(int argc,char *argv[],int mode)
 							*/
 							client_send_close_msg(client,udp_peer);
 							
-							fprintf(stderr,"send msg back\n");
 							ret = client_send_tcp_data_back(client,retcode,10);
-							fprintf(stderr,"send msg done\n");
 						}
 						disconnect_and_remove_client(clients,client,&client_fds,1);
 
